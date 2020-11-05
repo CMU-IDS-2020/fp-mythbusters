@@ -17,7 +17,7 @@ Update towards the end of the project.
 ### Proposal
 
 - [ ] The URL at the top of this readme needs to point to your application online. It should also list the names of the team members.
-- [ ] A completed proposal. The contact should submit it as a PDF on Canvas.
+- [X] A completed proposal. The contact should submit it as a PDF on Canvas.
 
 ### Design review
 
