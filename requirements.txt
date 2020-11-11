@@ -1,1 +1,3 @@
+gensim
+nltk
 tweepy
