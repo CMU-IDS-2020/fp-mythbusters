@@ -8,7 +8,7 @@ import tweepy
 from twitter.twitter_secret_fetcher import get_api_key, get_api_secret_key, get_access_token, get_access_token_secret
 
 # Percentage of COVID tweets to sample, there are 239,861,658 in total
-SAMPLE_PERCENTAGE = 0.001
+SAMPLE_PERCENTAGE = 0.0001
 # Directory containing files that have COVID tweet IDs
 # I left this out of the git repo because it takes a LONG time to push and pull. So if you want to run this, just
 # download it your self and place them in this directory
@@ -42,7 +42,8 @@ def sample_tweet_ids_from_file(file_name):
 
 
 def should_sample():
-    return random.random() < SAMPLE_PERCENTAGE
+    # Since we're going to limit to english tweets, we'll make the naive assumption that half of the tweets are english
+    return random.random() < SAMPLE_PERCENTAGE * 2
 
 
 ###############################################
@@ -69,7 +70,8 @@ def get_tweets(tweet_ids, api):
             # https://developer.twitter.com/en/docs/twitter-api/v1/rate-limits
             time.sleep(15 * 60)
             tweets = api.statuses_lookup(tweet_ids[i:i + 100])
-        tweet_text = [clean_tweet(tweet.text) for tweet in tweets]
+        # Limit to english tweets
+        tweet_text = [clean_tweet(tweet.text) for tweet in tweets if tweet.lang == 'en']
         i += 100
         flush_tweets(tweet_text, file_name)
         print(f"finished tweet batch {int(i / 100)}")

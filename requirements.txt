@@ -1,4 +1,6 @@
 gensim
+matplotlib
 nltk
 streamlit
 tweepy
+wordcloud
