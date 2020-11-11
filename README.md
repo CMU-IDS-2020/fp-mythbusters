@@ -1,6 +1,6 @@
 # CMU Interactive Data Science Final Project
 
-* **Online URL**: TODO
+* **Online URL**: https://share.streamlit.io/cmu-ids-2020/fp-mythbusters/main
 * **Team members**:
   * Contact person: bwarren2@andrew.cmu.edu
   * jkoshako@andrew.cmu.edu
@@ -16,7 +16,7 @@ Update towards the end of the project.
 
 ### Proposal
 
-- [ ] The URL at the top of this readme needs to point to your application online. It should also list the names of the team members.
+- [X] The URL at the top of this readme needs to point to your application online. It should also list the names of the team members.
 - [X] A completed proposal. The contact should submit it as a PDF on Canvas.
 
 ### Design review
