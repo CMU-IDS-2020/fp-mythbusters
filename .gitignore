@@ -1,0 +1,14 @@
+# Twitter API keys
+twitter_secrets.txt
+
+# PyCharm files
+.idea/
+
+# Virtual environment
+venv/
+
+# Cached bytecode
+*/__pycache__/
+
+# COVID Tweet IDs
+data/covid_tweet_ids/
