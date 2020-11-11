@@ -30,3 +30,7 @@ Update towards the end of the project.
 - [ ] A 5 minute video demonstration.
 - [ ] Update Readme according to Canvas instructions.
 - [ ] A detailed project report. The contact should submit the video and report as a PDF on Canvas.
+
+### Data References
+
+Kerchner, Daniel; Wrubel, Laura, 2020, "Coronavirus Tweet Ids", https://doi.org/10.7910/DVN/LW0BTB, Harvard Dataverse, V7 
