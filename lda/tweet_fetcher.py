@@ -56,6 +56,7 @@ def connect_to_twitter():
 
 
 def get_tweets(tweet_ids, api):
+    # We add the timestamp to the file name as a unique identifier so we don't overwrite older files
     ts = time.time()
     file_name = f"{COVID_TWEET_TEXT_DIR}/tweets_{ts}.txt"
     i = 0
