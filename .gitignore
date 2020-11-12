@@ -12,3 +12,7 @@ venv/
 
 # COVID Tweet IDs
 data/covid_tweet_ids/
+
+# DS_Store files for subdirectories
+.DS_Store
+
