@@ -4,3 +4,9 @@ nltk
 streamlit
 tweepy
 wordcloud
+altair
+vega_datasets
+pandas
+xlrd
+notebook
+covidcast
