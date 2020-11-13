@@ -1,0 +1,65 @@
+,State FIPS,Name
+0,0,Northeast Region
+1,0,New England Division
+2,9,Connecticut
+3,23,Maine
+4,25,Massachusetts
+5,33,New Hampshire
+6,44,Rhode Island
+7,50,Vermont
+8,0,Middle Atlantic Division
+9,34,New Jersey
+10,36,New York
+11,42,Pennsylvania
+12,0,Midwest Region
+13,0,East North Central Division
+14,17,Illinois
+15,18,Indiana
+16,26,Michigan
+17,39,Ohio
+18,55,Wisconsin
+19,0,West North Central Division
+20,19,Iowa
+21,20,Kansas
+22,27,Minnesota
+23,29,Missouri
+24,31,Nebraska
+25,38,North Dakota
+26,46,South Dakota
+27,0,South Region
+28,0,South Atlantic Division
+29,10,Delaware
+30,11,District of Columbia
+31,12,Florida
+32,13,Georgia
+33,24,Maryland
+34,37,North Carolina
+35,45,South Carolina
+36,51,Virginia
+37,54,West Virginia
+38,0,East South Central Division
+39,1,Alabama
+40,21,Kentucky
+41,28,Mississippi
+42,47,Tennessee
+43,0,West South Central Division
+44,5,Arkansas
+45,22,Louisiana
+46,40,Oklahoma
+47,48,Texas
+48,0,West Region
+49,0,Mountain Division
+50,4,Arizona
+51,8,Colorado
+52,16,Idaho
+53,30,Montana
+54,32,Nevada
+55,35,New Mexico
+56,49,Utah
+57,56,Wyoming
+58,0,Pacific Division
+59,2,Alaska
+60,6,California
+61,15,Hawaii
+62,41,Oregon
+63,53,Washington
