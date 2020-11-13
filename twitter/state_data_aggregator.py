@@ -56,14 +56,12 @@ STATE_TO_CODE_MAP = {
     "Wyoming": "WY"
 }
 
-CODE_TO_STATE_MAP = {val: key for key, val in STATE_TO_CODE_MAP.items()}
-
 GEO_TWEET_ID_DIR = "../data/tweets/geo_covid_tweet_ids/geo"
 GEO_TWEET_TEXT_DIR = "../data/tweets/geo_covid_tweets"
 
 
 def aggregate():
-    for state, code in state_map.items():
+    for state, code in STATE_TO_CODE_MAP.items():
         aggregate_state(GEO_TWEET_ID_DIR, state, code)
         aggregate_state(GEO_TWEET_TEXT_DIR, state, code)
 
@@ -77,7 +75,7 @@ def aggregate_state(directory, state, code):
 
 
 def delete_state_files():
-    for state, _ in state_map.items():
+    for state, _ in STATE_TO_CODE_MAP.items():
         delete_state_file(GEO_TWEET_ID_DIR, state)
         delete_state_file(GEO_TWEET_TEXT_DIR, state)
 

@@ -65,7 +65,7 @@ def main():
     nltk.download("stopwords")
     nltk.download("punkt")
     stopwords = nltk.corpus.stopwords.words("english")
-    wordcloud = get_wordcloud(stopwords)
+    wordcloud = get_wordcloud(stopwords=stopwords)
     st.pyplot(wordcloud)
     selected_state = draw_state_counties()
     state_wordcloud = get_wordcloud(STATE_TO_CODE_MAP[selected_state.strip()], stopwords)

@@ -7,7 +7,6 @@ import numpy as np
 import wordcloud
 from PIL import Image
 from nltk.stem.wordnet import WordNetLemmatizer
-from twitter.state_data_aggregator import CODE_TO_STATE_MAP
 
 # File containing tweets
 TWEET_DATA_DIR = "tweets"
@@ -18,7 +17,7 @@ GEO_TWEET_DIR = "geo_covid_tweets"
 
 def get_tweets(data_dir, state=None):
 
-    if state and state in CODE_TO_STATE_MAP:
+    if state:
         file = f"{TWEET_DATA_DIR}/{GEO_TWEET_DIR}/{state}.txt"
     else:
         file = f"{TWEET_DATA_DIR}/{TWEET_FILE}"
@@ -78,7 +77,7 @@ def flatten_list(list_of_lists):
 
 
 def get_state_mask(data_dir, state):
-    if not state or state not in CODE_TO_STATE_MAP:
+    if not state:
         return None
     file_name = f"{data_dir}/state_pics/{state}.png"
     if not os.path.exists(file_name):
