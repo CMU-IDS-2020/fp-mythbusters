@@ -1,8 +1,11 @@
+import os
 import re
 
 import nltk
+import numpy as np
 # https://amueller.github.io/word_cloud/index.html
 import wordcloud
+from PIL import Image
 from nltk.stem.wordnet import WordNetLemmatizer
 
 # File containing tweets
@@ -72,12 +75,33 @@ def flatten_list(list_of_lists):
     return [element for lst in list_of_lists for element in lst]
 
 
-def create_wordcloud(tweets):
+def get_state_mask(data_dir, state):
+    if not state:
+        return None
+    file_name = f"{data_dir}/state_pics/{state}.png"
+    if not os.path.exists(file_name):
+        return None
+
+    img = Image.open(file_name)
+    mask = np.array(img, dtype='int')
+    mask[mask > 10] = 255
+    mask[mask != 255] = 0
+    return mask
+
+
+def create_wordcloud(tweets, data_dir, state=None):
     flat_tweets = flatten_list(tweets)
     tweet_str = " ".join(flat_tweets)
     # TODO Consider saving this to a file with pickle so we don't have to recompute every time. Since the tweet files
     #  are static, then this should never change for the same tweet file.
-    return wordcloud.WordCloud().generate(tweet_str)
+    #  Or we can save them to an image file and use that
+
+    state_mask = get_state_mask(data_dir, state)
+    if state_mask is not None:
+        return wordcloud.WordCloud(background_color="white", mask=state_mask, contour_width=2,
+                                   contour_color="steelblue").generate(tweet_str)
+    else:
+        return wordcloud.WordCloud().generate(tweet_str)
 
 
 def get_wordcloud(data_dir, state=None):
@@ -89,8 +113,4 @@ def get_wordcloud(data_dir, state=None):
     # stopwords.union(nltk.corpus.stopwords.words("spanish"))
     tweets = get_tweets(data_dir, state)
     tweets = clean_tweets(tweets, lemmatizer, stopwords)
-    return create_wordcloud(tweets)
-
-
-if __name__ == "__main__":
-    get_wordcloud("../data")
+    return create_wordcloud(tweets, data_dir, state)

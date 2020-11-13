@@ -118,7 +118,6 @@ def main():
     wordcloud = get_wordcloud()
     st.pyplot(wordcloud)
     selected_state = draw_state_counties()
-    # TODO we can shape these wordclouds to any shape we want, it would be sick to shape them like the state they're from
     state_wordcloud = get_wordcloud(state_map[selected_state.strip()])
     st.pyplot(state_wordcloud)
 
