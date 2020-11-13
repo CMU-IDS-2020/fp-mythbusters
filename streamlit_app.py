@@ -8,11 +8,66 @@ import altair as alt
 from vega_datasets import data
 
 DATA_DIR = "data"
+state_map = {
+    "Alabama": "AL",
+    "Alaska": "AK",
+    "Arizona": "AZ",
+    "Arkansas": "AR",
+    "California": "CA",
+    "Colorado": "CO",
+    "Connecticut": "CT",
+    "Delaware": "DE",
+    "District of Columbia": "DC",
+    "Florida": "FL",
+    "Georgia": "GA",
+    "Hawaii": "HI",
+    "Idaho": "ID",
+    "Illinois": "IL",
+    "Indiana": "IN",
+    "Iowa": "IA",
+    "Kansas": "KS",
+    "Kentucky": "KY",
+    "Louisiana": "LA",
+    "Maine": "ME",
+    "Maryland": "MD",
+    "Massachusetts": "MA",
+    "Michigan": "MI",
+    "Minnesota": "MN",
+    "Mississippi": "MS",
+    "Missouri": "MO",
+    "Montana": "MT",
+    "Nebraska": "NE",
+    "Nevada": "NV",
+    "New Hampshire": "NH",
+    "New Jersey": "NJ",
+    "New Mexico": "NM",
+    "New York": "NY",
+    "North Carolina": "NC",
+    "North Dakota": "ND",
+    "Ohio": "OH",
+    "Oklahoma": "OK",
+    "Oregon": "OR",
+    "Pennsylvania": "PA",
+    "Puerto Rico": "PR",
+    "Rhode Island": "RI",
+    "South Carolina": "SC",
+    "South Dakota": "SD",
+    "Tennessee": "TN",
+    "Texas": "TX",
+    "Utah": "UT",
+    "Vermont": "VT",
+    "Virgin Islands": "VI",
+    "Virginia": "VA",
+    "Washington": "WA",
+    "West Virginia": "WV",
+    "Wisconsin": "WI",
+    "Wyoming": "WY"
+}
 
 
 @st.cache(allow_output_mutation=True)
-def get_wordcloud():
-    wc = twitter.word_cloud.main(DATA_DIR)
+def get_wordcloud(state=None):
+    wc = twitter.word_cloud.get_wordcloud(DATA_DIR, state)
     fig, ax = plt.subplots()
     ax.imshow(wc, interpolation='bilinear')
     ax.axis("off")
@@ -56,12 +111,16 @@ def draw_state_counties():
         .transform_lookup(lookup='id', from_=alt.LookupData(usda_df, 'FIPS', [selected_usda_feature, 'Name'])) \
         .properties(width=650, height=650)
     st.write(state_map)
+    return selected_state
 
 
 def main():
     wordcloud = get_wordcloud()
     st.pyplot(wordcloud)
-    draw_state_counties()
+    selected_state = draw_state_counties()
+    # TODO we can shape these wordclouds to any shape we want, it would be sick to shape them like the state they're from
+    state_wordcloud = get_wordcloud(state_map[selected_state.strip()])
+    st.pyplot(state_wordcloud)
 
 
 if __name__ == "__main__":

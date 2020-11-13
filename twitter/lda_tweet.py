@@ -46,7 +46,7 @@ I'm leaving the code here for historic/discussion purposes
 '''
 
 # File containing tweets
-TWEET_FILE = "../data/covid_tweets/tweets_24_000.txt"
+TWEET_FILE = "../data/tweets/covid_tweets/tweets_24_000.txt"
 stemmer = nltk.stem.SnowballStemmer("english")
 
 
