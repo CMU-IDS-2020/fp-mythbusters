@@ -1,4 +1,5 @@
 import matplotlib.pyplot as plt
+import nltk
 import streamlit as st
 
 import twitter.word_cloud
