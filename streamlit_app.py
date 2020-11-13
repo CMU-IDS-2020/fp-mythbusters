@@ -11,13 +11,13 @@ from vega_datasets import data
 DATA_DIR = "data"
 
 
-@st.cache(allow_output_mutation=True)
-def get_wordcloud():
-    wc = twitter.word_cloud.main(DATA_DIR)
-    fig, ax = plt.subplots()
-    ax.imshow(wc, interpolation='bilinear')
-    ax.axis("off")
-    return fig
+# @st.cache(allow_output_mutation=True)
+# def get_wordcloud():
+#     wc = twitter.word_cloud.main(DATA_DIR)
+#     fig, ax = plt.subplots()
+#     ax.imshow(wc, interpolation='bilinear')
+#     ax.axis("off")
+#     return fig
 
 
 @st.cache(allow_output_mutation=True)  # add caching so we load the data only once
