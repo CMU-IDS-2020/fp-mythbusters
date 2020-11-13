@@ -3,6 +3,7 @@ import re
 
 import nltk
 import numpy as np
+import streamlit as st
 # https://amueller.github.io/word_cloud/index.html
 import wordcloud
 from PIL import Image
@@ -16,10 +17,15 @@ GEO_TWEET_DIR = "geo_covid_tweets"
 
 
 def get_tweets(data_dir, state=None):
+    st.write(f"data dir: {data_dir}")
+
     if state:
         file = f"{TWEET_DATA_DIR}/{GEO_TWEET_DIR}/{state}.txt"
+        st.write(f"file: {file}")
     else:
         file = f"{TWEET_DATA_DIR}/{TWEET_FILE}"
+        st.write(f"file: {file}")
+    st.write(f"file: {file}")
     with open(f"{data_dir}/{file}") as f:
         return f.readlines()
 
