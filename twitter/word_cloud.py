@@ -21,9 +21,14 @@ def get_tweets(data_dir, state=None):
 
     if state:
         file = f"{TWEET_DATA_DIR}/{GEO_TWEET_DIR}/{state}.txt"
+        st.write(f"TWEET_DATA_DIR: {TWEET_DATA_DIR}")
+        st.write(f"GEO_TWEET_DIR: {GEO_TWEET_DIR}")
+        st.write(f"state: {state}")
         st.write(f"file: {file}")
     else:
         file = f"{TWEET_DATA_DIR}/{TWEET_FILE}"
+        st.write(f"TWEET_DATA_DIR: {TWEET_DATA_DIR}")
+        st.write(f"TWEET_FILE: {TWEET_FILE}")
         st.write(f"file: {file}")
     st.write(f"file: {file}")
     with open(f"{data_dir}/{file}") as f:
