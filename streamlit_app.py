@@ -1,11 +1,11 @@
-import matplotlib.pyplot as plt
-import streamlit as st
-
-import twitter.word_cloud
-
-import pandas as pd
 import altair as alt
+import matplotlib.pyplot as plt
+import pandas as pd
+import streamlit as st
 from vega_datasets import data
+
+import twitter.tweet_fetcher
+import twitter.word_cloud
 
 DATA_DIR = "data"
 state_map = {
@@ -120,6 +120,14 @@ def main():
     selected_state = draw_state_counties()
     state_wordcloud = get_wordcloud(state_map[selected_state.strip()])
     st.pyplot(state_wordcloud)
+    st.write(
+        "This is just a random tweet sampled from NY for prototype purpose. In the final project we may want to embed a couple of tweets from each state")
+    html = '''
+        <blockquote class="twitter-tweet"><p lang="en" dir="ltr"><a href="https://twitter.com/hashtag/CoronaVirusNYC?src=hash&amp;ref_src=twsrc%5Etfw">#CoronaVirusNYC</a> <a href="https://twitter.com/hashtag/ChinaLiedAndPeopleDied?src=hash&amp;ref_src=twsrc%5Etfw">#ChinaLiedAndPeopleDied</a> <br><br>You honestly still believe Chinese Communist Party regarding <a href="https://twitter.com/hashtag/CoronaVirus?src=hash&amp;ref_src=twsrc%5Etfw">#CoronaVirus</a> / <a href="https://twitter.com/hashtag/COVID%E3%83%BC19?src=hash&amp;ref_src=twsrc%5Etfw">#COVIDー19</a> originating from someone eating a Bat Burger from Food Market in <a href="https://twitter.com/hashtag/Wuhan?src=hash&amp;ref_src=twsrc%5Etfw">#Wuhan</a> after seeing this...!!!<br><br>To, mae <a href="https://twitter.com/hashtag/COVID19?src=hash&amp;ref_src=twsrc%5Etfw">#COVID19</a> is likely more tragic &amp; sinister... <a href="https://t.co/EvVI5SXD1U">https://t.co/EvVI5SXD1U</a></p>&mdash; Darren Williams (@DazAltTheory) <a href="https://twitter.com/DazAltTheory/status/1248540485733552128?ref_src=twsrc%5Etfw">April 10, 2020</a></blockquote>
+        <script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
+    '''
+    st.write('https://twitter.com/DazAltTheory/status/1248540485733552128')
+    st.markdown(html, unsafe_allow_html=True)
 
 
 if __name__ == "__main__":

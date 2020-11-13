@@ -144,14 +144,19 @@ def flush_list(list_, file_name):
         f.writelines(f"{tweet}\n" for tweet in list_)
 
 
+def get_html():
+    api = connect_to_twitter()
+    res = api.get_oembed(1248540485733552128)
+    return res["html"]
+
+
 def main():
     use_geo_location = True
     sampled_tweet_ids = sample_tweet_ids(use_geo_location)
     api = connect_to_twitter()
-    # temp = api.get_status(sampled_tweet_ids[50])
-    # ht = api.get_oembed(1244953100789710849)
     get_tweets(sampled_tweet_ids, api, use_geo_location)
 
 
 if __name__ == "__main__":
-    main()
+    # main()
+    temp = get_html()
