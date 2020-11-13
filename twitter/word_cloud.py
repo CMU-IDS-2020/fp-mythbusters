@@ -108,8 +108,7 @@ def get_wordcloud(data_dir, state=None, stopwords=None):
     nltk.download("stopwords", quiet=True)
     nltk.download("punkt", quiet=True)
     lemmatizer = WordNetLemmatizer()
-    if stopwords is None:
-        stopwords = set(nltk.corpus.stopwords.words("english"))
+    # stopwords = set(nltk.corpus.stopwords.words("english"))
     # In case we want to re-include spanish tweets
     # stopwords.union(nltk.corpus.stopwords.words("spanish"))
     tweets = get_tweets(data_dir, state)
