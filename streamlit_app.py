@@ -60,8 +60,8 @@ def draw_state_counties():
 
 
 def main():
-    nltk.download("stopwords", quiet=True)
-    nltk.download("punkt", quiet=True)
+    nltk.download("stopwords")
+    nltk.download("punkt")
     wordcloud = get_wordcloud()
     st.pyplot(wordcloud)
     draw_state_counties()
