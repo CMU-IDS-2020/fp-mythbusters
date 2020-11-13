@@ -13,7 +13,7 @@ DATA_DIR = "data"
 
 
 @st.cache(allow_output_mutation=True)
-def get_wordcloud(state=None, stopwords):
+def get_wordcloud(state=None, stopwords=None):
     wc = twitter.word_cloud.get_wordcloud(DATA_DIR, state, stopwords)
     fig, ax = plt.subplots()
     ax.imshow(wc, interpolation='bilinear')
