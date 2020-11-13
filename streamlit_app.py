@@ -13,8 +13,8 @@ DATA_DIR = "data"
 
 
 @st.cache(allow_output_mutation=True)
-def get_wordcloud(state=None):
-    wc = twitter.word_cloud.get_wordcloud(DATA_DIR, state)
+def get_wordcloud(state=None, stopwords):
+    wc = twitter.word_cloud.get_wordcloud(DATA_DIR, state, stopwords)
     fig, ax = plt.subplots()
     ax.imshow(wc, interpolation='bilinear')
     ax.axis("off")
@@ -64,10 +64,11 @@ def draw_state_counties():
 def main():
     nltk.download("stopwords")
     nltk.download("punkt")
-    wordcloud = get_wordcloud()
+    stopwords = nltk.corpus.stopwords.words("english")
+    wordcloud = get_wordcloud(stopwords)
     st.pyplot(wordcloud)
     selected_state = draw_state_counties()
-    state_wordcloud = get_wordcloud(STATE_MAP[selected_state.strip()])
+    state_wordcloud = get_wordcloud(STATE_MAP[selected_state.strip()], stopwords)
     st.pyplot(state_wordcloud)
     st.write(
         "This is just a random tweet sampled from NY for prototype purpose. In the final project we may want to embed a couple of tweets from each state")
