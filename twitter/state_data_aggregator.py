@@ -1,6 +1,6 @@
 import os
 
-state_map = {
+STATE_MAP = {
     "Alabama": "AL",
     "Alaska": "AK",
     "Arizona": "AZ",
