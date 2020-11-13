@@ -7,7 +7,7 @@ from vega_datasets import data
 
 import twitter.tweet_fetcher
 import twitter.word_cloud
-from twitter.state_data_aggregator import STATE_MAP
+from twitter.state_data_aggregator import STATE_TO_CODE_MAP
 
 DATA_DIR = "data"
 
@@ -68,7 +68,7 @@ def main():
     wordcloud = get_wordcloud(stopwords)
     st.pyplot(wordcloud)
     selected_state = draw_state_counties()
-    state_wordcloud = get_wordcloud(STATE_MAP[selected_state.strip()], stopwords)
+    state_wordcloud = get_wordcloud(STATE_TO_CODE_MAP[selected_state.strip()], stopwords)
     st.pyplot(state_wordcloud)
     st.write(
         "This is just a random tweet sampled from NY for prototype purpose. In the final project we may want to embed a couple of tweets from each state")

@@ -1,6 +1,6 @@
 import os
 
-STATE_MAP = {
+STATE_TO_CODE_MAP = {
     "Alabama": "AL",
     "Alaska": "AK",
     "Arizona": "AZ",
@@ -55,6 +55,8 @@ STATE_MAP = {
     "Wisconsin": "WI",
     "Wyoming": "WY"
 }
+
+CODE_TO_STATE_MAP = {val: key for key, val in STATE_TO_CODE_MAP.items()}
 
 GEO_TWEET_ID_DIR = "../data/tweets/geo_covid_tweet_ids/geo"
 GEO_TWEET_TEXT_DIR = "../data/tweets/geo_covid_tweets"

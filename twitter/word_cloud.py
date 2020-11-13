@@ -3,11 +3,11 @@ import re
 
 import nltk
 import numpy as np
-import streamlit as st
 # https://amueller.github.io/word_cloud/index.html
 import wordcloud
 from PIL import Image
 from nltk.stem.wordnet import WordNetLemmatizer
+from twitter.state_data_aggregator import CODE_TO_STATE_MAP
 
 # File containing tweets
 TWEET_DATA_DIR = "tweets"
@@ -17,20 +17,11 @@ GEO_TWEET_DIR = "geo_covid_tweets"
 
 
 def get_tweets(data_dir, state=None):
-    st.write(f"data dir: {data_dir}")
 
-    if state:
+    if state and state in CODE_TO_STATE_MAP:
         file = f"{TWEET_DATA_DIR}/{GEO_TWEET_DIR}/{state}.txt"
-        st.write(f"TWEET_DATA_DIR: {TWEET_DATA_DIR}")
-        st.write(f"GEO_TWEET_DIR: {GEO_TWEET_DIR}")
-        st.write(f"state: {state}")
-        st.write(f"file: {file}")
     else:
         file = f"{TWEET_DATA_DIR}/{TWEET_FILE}"
-        st.write(f"TWEET_DATA_DIR: {TWEET_DATA_DIR}")
-        st.write(f"TWEET_FILE: {TWEET_FILE}")
-        st.write(f"file: {file}")
-    st.write(f"file: {file}")
     with open(f"{data_dir}/{file}") as f:
         return f.readlines()
 
@@ -87,7 +78,7 @@ def flatten_list(list_of_lists):
 
 
 def get_state_mask(data_dir, state):
-    if not state:
+    if not state or state not in CODE_TO_STATE_MAP:
         return None
     file_name = f"{data_dir}/state_pics/{state}.png"
     if not os.path.exists(file_name):
