@@ -1,6 +1,7 @@
 import altair as alt
 import matplotlib.pyplot as plt
 import pandas as pd
+import nltk
 import streamlit as st
 from vega_datasets import data
 
@@ -61,6 +62,8 @@ def draw_state_counties():
 
 
 def main():
+    nltk.download("stopwords")
+    nltk.download("punkt")
     wordcloud = get_wordcloud()
     st.pyplot(wordcloud)
     selected_state = draw_state_counties()
