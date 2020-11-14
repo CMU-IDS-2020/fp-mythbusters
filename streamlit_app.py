@@ -1,18 +1,22 @@
-import matplotlib.pyplot as plt
-import streamlit as st
-
-import twitter.word_cloud
-
-import pandas as pd
 import altair as alt
+import matplotlib.pyplot as plt
+import pandas as pd
+import nltk
+import streamlit as st
 from vega_datasets import data
+
+import twitter.tweet_fetcher
+import twitter.word_cloud
+from twitter.state_data_aggregator import STATE_TO_CODE_MAP
+
+from datetime import timedelta
 
 DATA_DIR = "data"
 
 
 @st.cache(allow_output_mutation=True)
-def get_wordcloud():
-    wc = twitter.word_cloud.main(DATA_DIR)
+def get_wordcloud(state=None, stopwords=None):
+    wc = twitter.word_cloud.get_wordcloud(DATA_DIR, state, stopwords)
     fig, ax = plt.subplots()
     ax.imshow(wc, interpolation='bilinear')
     ax.axis("off")
@@ -21,47 +25,199 @@ def get_wordcloud():
 
 @st.cache(allow_output_mutation=True)  # add caching so we load the data only once
 def load_state_fips():
-    state_fips_df = pd.read_excel("data/covid_usafacts/raw/state_fips_2019.xlsx", skiprows=range(5))
-    state_fips_df = state_fips_df[state_fips_df["State (FIPS)"] > 0]  # exclude regions, divisions, and non-state rows
-    return state_fips_df[["State (FIPS)", "Name"]].sort_values("Name").set_index("Name").to_dict()["State (FIPS)"]
+    state_fips = pd.read_csv("data/fips/clean/state_fips_2019.csv", index_col=0)
+    state_fips = state_fips[state_fips["State FIPS"] > 0]  # exclude regions, divisions, and non-state rows
+    return state_fips[["State FIPS", "Name"]].sort_values("Name").set_index("Name").to_dict()["State FIPS"]
 
 
 @st.cache(allow_output_mutation=True)
-def load_state_usda():
-    state_usda_dict = {
-        "New York": pd.read_csv("data/usda_county_datasets/clean/ny_counties.csv", index_col=0),
-        "Pennsylvania": pd.read_csv("data/usda_county_datasets/clean/pa_counties.csv", index_col=0)
+def load_usda_data():
+    poverty = pd.read_csv("data/usda_county_datasets/clean/poverty_2018.csv", index_col=0)
+    unemployment_median_hhi = pd.read_csv("data/usda_county_datasets/clean/unemployment_median_hhi_2018.csv", index_col=0)
+    population = pd.read_csv("data/usda_county_datasets/clean/population_2018.csv", index_col=0)
+    education = pd.read_csv("data/usda_county_datasets/clean/education_2018.csv", index_col=0)
+    usda_data = {
+        'Poverty': poverty,
+        'Unemployment and Median HHI': unemployment_median_hhi,
+        'Population': population,
+        'Education': education
     }
-    return state_usda_dict
+    return usda_data
+
+
+@st.cache(allow_output_mutation=True)
+def load_covid_data():
+
+    # Read in data from local csv files
+    confirmed_cumulative_cases_prop_fips = pd.read_csv("data/covid_usafacts/clean/confirmed_cumulative_cases_props_fips.csv", index_col=0)
+    confirmed_daily_incidence_cases_prop_fips = pd.read_csv("data/covid_usafacts/clean/confirmed_daily_incidence_cases_prop_fips.csv", index_col=0)
+    cumulative_deaths_prop_fips = pd.read_csv("data/covid_usafacts/clean/cumulative_deaths_prop_fips.csv", index_col=0)
+    daily_incidence_deaths_prop_fips = pd.read_csv("data/covid_usafacts/clean/daily_incidence_deaths_prop_fips.csv", index_col=0)
+
+    # Remove rows with values < 0.0 (not possible)
+    confirmed_cumulative_cases_prop_fips = confirmed_cumulative_cases_prop_fips[confirmed_cumulative_cases_prop_fips["value"] >= 0.0]
+    confirmed_daily_incidence_cases_prop_fips = confirmed_daily_incidence_cases_prop_fips[confirmed_daily_incidence_cases_prop_fips["value"] >= 0.0]
+    cumulative_deaths_prop_fips = cumulative_deaths_prop_fips[cumulative_deaths_prop_fips["value"] >= 0.0]
+    daily_incidence_deaths_prop_fips = daily_incidence_deaths_prop_fips[daily_incidence_deaths_prop_fips["value"] >= 0.0]
+
+    # Convert all time_value columns into datetime
+    confirmed_cumulative_cases_prop_fips["time_value"] = pd.to_datetime(confirmed_cumulative_cases_prop_fips["time_value"])
+    confirmed_daily_incidence_cases_prop_fips["time_value"] = pd.to_datetime(confirmed_daily_incidence_cases_prop_fips["time_value"])
+    cumulative_deaths_prop_fips["time_value"] = pd.to_datetime(cumulative_deaths_prop_fips["time_value"])
+    daily_incidence_deaths_prop_fips["time_value"] = pd.to_datetime(daily_incidence_deaths_prop_fips["time_value"])
+
+    # Only fetch most recent cumulative data
+    confirmed_cumulative_cases_prop_fips = confirmed_cumulative_cases_prop_fips.sort_values("time_value")
+    confirmed_cumulative_cases_prop_fips = confirmed_cumulative_cases_prop_fips[~confirmed_cumulative_cases_prop_fips.duplicated("FIPS", keep='last')]
+    cumulative_deaths_prop_fips = cumulative_deaths_prop_fips.sort_values("time_value")
+    cumulative_deaths_prop_fips = cumulative_deaths_prop_fips[~cumulative_deaths_prop_fips.duplicated("FIPS", keep='last')]
+
+    covid_data = {
+        'Cumulative Cases': confirmed_cumulative_cases_prop_fips,
+        'Daily New Cases': confirmed_daily_incidence_cases_prop_fips,
+        'Cumulative Deaths': cumulative_deaths_prop_fips,
+        'Daily Deaths': daily_incidence_deaths_prop_fips
+    }
+
+    return covid_data
+
+
+@st.cache(allow_output_mutation=True)
+def get_covid_date_ranges(covid_data):
+    covid_date_ranges = {}
+    for covid_feature, df in covid_data.items():
+        covid_date_ranges[covid_feature] = df["time_value"].min(), df["time_value"].max()
+    return covid_date_ranges
+
+
+def get_usda_state_map(counties, usda_df, selected_usda_feature, selected_state_fips):
+    usda_state_map = alt.Chart(data=counties) \
+        .mark_geoshape(stroke='black', strokeWidth=1) \
+        .encode(color="%s:Q" % selected_usda_feature,
+                tooltip=[alt.Tooltip('id:N', title='FIPS'),
+                         alt.Tooltip('Area Name:N', title='Location'),
+                         alt.Tooltip('%s:Q' % selected_usda_feature, title='Value')]) \
+        .transform_calculate(state_id="(datum.id / 1000)|0") \
+        .transform_filter(alt.datum.state_id == selected_state_fips) \
+        .transform_lookup(lookup='id', from_=alt.LookupData(usda_df, 'FIPS', [selected_usda_feature, 'Area Name'])) \
+        .properties(width=650, height=650)
+    return usda_state_map
 
 
 def draw_state_counties():
-    state_usda_dict = load_state_usda()
-    state_fips_dict = load_state_fips()
-
-    states = list(state_usda_dict.keys())
-    selected_state = st.selectbox('State', options=states, index=states.index("New York"))
-
-    usda_df = state_usda_dict.get(selected_state)
-    usda_features = [col for col in usda_df.columns if col not in ['FIPS', 'Name']]
-    selected_usda_feature = st.selectbox('Based on', options=usda_features, index=0)
-
     counties = alt.topo_feature(data.us_10m.url, 'counties')
-    state_map = alt.Chart(data=counties).mark_geoshape(stroke='black', strokeWidth=1) \
-        .encode(color="%s:Q" % selected_usda_feature,
-                tooltip=[alt.Tooltip('id:N', title='FIPS'),
-                         alt.Tooltip('Name:N', title='County')]) \
-        .transform_calculate(state_id="(datum.id / 1000)|0") \
-        .transform_filter(alt.datum.state_id == state_fips_dict[selected_state]) \
-        .transform_lookup(lookup='id', from_=alt.LookupData(usda_df, 'FIPS', [selected_usda_feature, 'Name'])) \
-        .properties(width=650, height=650)
-    st.write(state_map)
+
+    # Select US state to view
+    state_fips_dict = load_state_fips()
+    states = list(state_fips_dict.keys())
+    selected_state = st.sidebar.selectbox('US State', options=states, index=states.index("New York"))
+    selected_state_fips = state_fips_dict.get(selected_state)
+
+    # ----- Create USDA feature state map -----
+    # Load USDA data
+    usda_data = load_usda_data()
+
+    # Select USDA category
+    selected_usda_category = st.sidebar.selectbox('Based on', options=list(usda_data.keys()), index=0)
+
+    # Select USDA category feature to color choropleth map
+    usda_df = usda_data.get(selected_usda_category)
+    usda_df = usda_df[usda_df["FIPS"] % 1000 != 0]  # remove non-county rows
+    usda_df = usda_df[usda_df["FIPS"] // 1000 == selected_state_fips]  # filter for only counties in the selected state
+    usda_features = [col for col in usda_df.columns if col not in ['FIPS', 'State Abrv', 'Area Name']]
+    selected_usda_feature = st.sidebar.radio('USDA Feature', options=usda_features, index=0)
+
+    # Create state map based on USDA feature
+    usda_state_map = get_usda_state_map(counties, usda_df, selected_usda_feature, selected_state_fips)
+    st.write("%s (%s)" % (selected_usda_category, selected_usda_feature))
+    st.write(usda_state_map)
+
+    # ----- Create COVID feature state map -----
+    # Load COVID data
+    covid_data = load_covid_data()
+    covid_date_ranges = get_covid_date_ranges(covid_data)
+
+    # Select covid feature
+    selected_covid_feature = st.sidebar.selectbox('COVID Feature per 100,000 population', options=list(covid_data.keys()), index=1)
+    covid_df = covid_data.get(selected_covid_feature)
+
+    covid_df = covid_df[covid_df["FIPS"] // 1000 == selected_state_fips]  # filter for only counties in the selected state
+
+    if 'Daily' in selected_covid_feature:
+
+        # Select date range
+        min_date, max_date = covid_date_ranges.get(selected_covid_feature)
+        selected_min_date = st.sidebar.date_input("From Date", value=max_date-timedelta(days=7), min_value=min_date, max_value=max_date, key="min_date")
+        selected_max_date = st.sidebar.date_input("To Date", value=max_date, min_value=min_date, max_value=max_date, key="max_date")
+        if selected_min_date > selected_max_date:
+            st.error("ERROR: 'From Date' must be earlier or equal to 'To Date'")
+
+        st.write(selected_covid_feature + " per 100,000 population (%s through %s)" % (str(selected_min_date), str(selected_max_date)))
+
+        # Select function for values in date range
+        covid_date_range_functions = ["Max", "Min", "Average", "Median"]
+        selected_agg_function = st.sidebar.selectbox("Show for date range", options=covid_date_range_functions, index=covid_date_range_functions.index("Max"))
+
+        # Select rows within date range
+        covid_df = covid_df[(covid_df["time_value"] >= pd.Timestamp(selected_min_date)) & (covid_df["time_value"] <= pd.Timestamp(selected_max_date))]
+
+        # Calculate aggregates for values in date range
+        covid_df = covid_df.groupby(['FIPS', 'Area Name'])['value']\
+            .agg(Min='min', Max='max', Average='mean', Median='median')\
+            .reset_index()
+
+        # Create covid map based on COVID feature
+        covid_state_map = alt.Chart(data=counties) \
+            .mark_geoshape(stroke='black', strokeWidth=1) \
+            .encode(color="%s:Q" % selected_agg_function,
+                    tooltip=[alt.Tooltip('id:N', title='FIPS'),
+                             alt.Tooltip('Area Name:N', title='Location'),
+                             alt.Tooltip('%s:Q' % selected_agg_function, title=selected_agg_function)]) \
+            .transform_calculate(state_id="(datum.id / 1000)|0") \
+            .transform_filter(alt.datum.state_id == selected_state_fips) \
+            .transform_lookup(lookup='id', from_=alt.LookupData(covid_df,
+                                                                'FIPS',
+                                                                [selected_agg_function, 'time_value', 'issue', 'Area Name'])) \
+            .properties(width=650, height=650)
+
+    else:
+        st.write(selected_covid_feature + " per 100,000 population (Updated %s)" % str(covid_date_ranges.get(selected_covid_feature)[1]))
+
+        covid_state_map = alt.Chart(data=counties) \
+            .mark_geoshape(stroke='black', strokeWidth=1) \
+            .encode(color="%s:Q" % 'value',
+                    tooltip=[alt.Tooltip('id:N', title='FIPS'),
+                             alt.Tooltip('Area Name:N', title='Location'),
+                             alt.Tooltip('%s:Q' % 'value', title='Value')]) \
+            .transform_calculate(state_id="(datum.id / 1000)|0") \
+            .transform_filter(alt.datum.state_id == selected_state_fips) \
+            .transform_lookup(lookup='id', from_=alt.LookupData(covid_df,
+                                                                'FIPS',
+                                                                ['value', 'time_value', 'issue', 'Area Name'])) \
+            .properties(width=650, height=650)
+
+    st.write(covid_state_map)
+
+    return selected_state
 
 
 def main():
-    wordcloud = get_wordcloud()
+    nltk.download("stopwords")
+    nltk.download("punkt")
+    stopwords = nltk.corpus.stopwords.words("english")
+    wordcloud = get_wordcloud(stopwords=stopwords)
     st.pyplot(wordcloud)
-    draw_state_counties()
+    selected_state = draw_state_counties()
+    state_wordcloud = get_wordcloud(STATE_TO_CODE_MAP[selected_state.strip()], stopwords)
+    st.pyplot(state_wordcloud)
+    st.write(
+        "This is just a random tweet sampled from NY for prototype purpose. In the final project we may want to embed a couple of tweets from each state")
+    html = '''
+        <blockquote class="twitter-tweet"><p lang="en" dir="ltr"><a href="https://twitter.com/hashtag/CoronaVirusNYC?src=hash&amp;ref_src=twsrc%5Etfw">#CoronaVirusNYC</a> <a href="https://twitter.com/hashtag/ChinaLiedAndPeopleDied?src=hash&amp;ref_src=twsrc%5Etfw">#ChinaLiedAndPeopleDied</a> <br><br>You honestly still believe Chinese Communist Party regarding <a href="https://twitter.com/hashtag/CoronaVirus?src=hash&amp;ref_src=twsrc%5Etfw">#CoronaVirus</a> / <a href="https://twitter.com/hashtag/COVID%E3%83%BC19?src=hash&amp;ref_src=twsrc%5Etfw">#COVIDー19</a> originating from someone eating a Bat Burger from Food Market in <a href="https://twitter.com/hashtag/Wuhan?src=hash&amp;ref_src=twsrc%5Etfw">#Wuhan</a> after seeing this...!!!<br><br>To, mae <a href="https://twitter.com/hashtag/COVID19?src=hash&amp;ref_src=twsrc%5Etfw">#COVID19</a> is likely more tragic &amp; sinister... <a href="https://t.co/EvVI5SXD1U">https://t.co/EvVI5SXD1U</a></p>&mdash; Darren Williams (@DazAltTheory) <a href="https://twitter.com/DazAltTheory/status/1248540485733552128?ref_src=twsrc%5Etfw">April 10, 2020</a></blockquote>
+        <script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
+    '''
+    st.write('https://twitter.com/DazAltTheory/status/1248540485733552128')
+    st.markdown(html, unsafe_allow_html=True)
 
 
 if __name__ == "__main__":
