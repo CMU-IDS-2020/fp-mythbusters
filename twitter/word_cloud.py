@@ -79,7 +79,7 @@ def flatten_list(list_of_lists):
 def get_state_mask(data_dir, state):
     if not state:
         return None
-    file_name = f"{data_dir}/state_pics/{state}.png"
+    file_name = f"{data_dir}/state_pics/{state}.jpg"
     if not os.path.exists(file_name):
         return None
 
