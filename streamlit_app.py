@@ -100,7 +100,8 @@ def get_usda_state_map(counties, usda_df, selected_usda_feature, selected_state_
         .transform_calculate(state_id="(datum.id / 1000)|0") \
         .transform_filter(alt.datum.state_id == selected_state_fips) \
         .transform_lookup(lookup='id', from_=alt.LookupData(usda_df, 'FIPS', [selected_usda_feature, 'Area Name'])) \
-        .properties(width=650, height=650)
+        .configure_legend(orient='bottom') \
+        .properties(width=500, height=400)
     return usda_state_map
 
 
@@ -113,24 +114,29 @@ def draw_state_counties():
     selected_state = st.sidebar.selectbox('US State', options=states, index=states.index("New York"))
     selected_state_fips = state_fips_dict.get(selected_state)
 
+    col1, col2 = st.beta_columns(2)
+
     # ----- Create USDA feature state map -----
+
     # Load USDA data
     usda_data = load_usda_data()
 
     # Select USDA category
-    selected_usda_category = st.sidebar.selectbox('Based on', options=list(usda_data.keys()), index=0)
+    selected_usda_category = col1.selectbox('Based on', options=list(usda_data.keys()), index=0)
 
     # Select USDA category feature to color choropleth map
     usda_df = usda_data.get(selected_usda_category)
     usda_df = usda_df[usda_df["FIPS"] % 1000 != 0]  # remove non-county rows
     usda_df = usda_df[usda_df["FIPS"] // 1000 == selected_state_fips]  # filter for only counties in the selected state
     usda_features = [col for col in usda_df.columns if col not in ['FIPS', 'State Abrv', 'Area Name']]
-    selected_usda_feature = st.sidebar.radio('USDA Feature', options=usda_features, index=0)
+    selected_usda_feature = col1.selectbox('USDA Feature', options=usda_features, index=0)
 
     # Create state map based on USDA feature
     usda_state_map = get_usda_state_map(counties, usda_df, selected_usda_feature, selected_state_fips)
-    st.write("%s (%s)" % (selected_usda_category, selected_usda_feature))
-    st.write(usda_state_map)
+
+    col1.write(selected_usda_category)
+    col1.write("(%s)" % selected_usda_feature)
+    col1.write(usda_state_map)
 
     # ----- Create COVID feature state map -----
     # Load COVID data
@@ -138,7 +144,7 @@ def draw_state_counties():
     covid_date_ranges = get_covid_date_ranges(covid_data)
 
     # Select covid feature
-    selected_covid_feature = st.sidebar.selectbox('COVID Feature per 100,000 population', options=list(covid_data.keys()), index=1)
+    selected_covid_feature = col2.selectbox('COVID Feature per 100,000 population', options=list(covid_data.keys()), index=1)
     covid_df = covid_data.get(selected_covid_feature)
 
     covid_df = covid_df[covid_df["FIPS"] // 1000 == selected_state_fips]  # filter for only counties in the selected state
@@ -147,16 +153,16 @@ def draw_state_counties():
 
         # Select date range
         min_date, max_date = covid_date_ranges.get(selected_covid_feature)
-        selected_min_date = st.sidebar.date_input("From Date", value=max_date-timedelta(days=7), min_value=min_date, max_value=max_date, key="min_date")
-        selected_max_date = st.sidebar.date_input("To Date", value=max_date, min_value=min_date, max_value=max_date, key="max_date")
+        selected_min_date = col2.date_input("From Date", value=max_date-timedelta(days=7), min_value=min_date, max_value=max_date, key="min_date")
+        selected_max_date = col2.date_input("To Date", value=max_date, min_value=min_date, max_value=max_date, key="max_date")
         if selected_min_date > selected_max_date:
             st.error("ERROR: 'From Date' must be earlier or equal to 'To Date'")
 
-        st.write(selected_covid_feature + " per 100,000 population (%s through %s)" % (str(selected_min_date), str(selected_max_date)))
+        col2.write(selected_covid_feature + " per 100,000 population\n(%s through %s)" % (str(selected_min_date), str(selected_max_date)))
 
         # Select function for values in date range
         covid_date_range_functions = ["Max", "Min", "Average", "Median"]
-        selected_agg_function = st.sidebar.selectbox("Show for date range", options=covid_date_range_functions, index=covid_date_range_functions.index("Max"))
+        selected_agg_function = col2.selectbox("Show for date range", options=covid_date_range_functions, index=covid_date_range_functions.index("Max"))
 
         # Select rows within date range
         covid_df = covid_df[(covid_df["time_value"] >= pd.Timestamp(selected_min_date)) & (covid_df["time_value"] <= pd.Timestamp(selected_max_date))]
@@ -178,10 +184,11 @@ def draw_state_counties():
             .transform_lookup(lookup='id', from_=alt.LookupData(covid_df,
                                                                 'FIPS',
                                                                 [selected_agg_function, 'time_value', 'issue', 'Area Name'])) \
-            .properties(width=650, height=650)
+            .configure_legend(orient='bottom')\
+            .properties(width=500, height=400)
 
     else:
-        st.write(selected_covid_feature + " per 100,000 population (Updated %s)" % str(covid_date_ranges.get(selected_covid_feature)[1]))
+        col2.write(selected_covid_feature + " per 100,000 population\n(Updated %s)" % str(covid_date_ranges.get(selected_covid_feature)[1]))
 
         covid_state_map = alt.Chart(data=counties) \
             .mark_geoshape(stroke='black', strokeWidth=1) \
@@ -194,14 +201,34 @@ def draw_state_counties():
             .transform_lookup(lookup='id', from_=alt.LookupData(covid_df,
                                                                 'FIPS',
                                                                 ['value', 'time_value', 'issue', 'Area Name'])) \
-            .properties(width=650, height=650)
+            .configure_legend(orient='bottom')\
+            .properties(width=500, height=400)
 
-    st.write(covid_state_map)
+    col2.write(covid_state_map)
 
     return selected_state
 
 
 def main():
+
+    # Source for adjusting container width in streamlit app
+    # https://discuss.streamlit.io/t/where-to-set-page-width-when-set-into-non-widescreeen-mode/959/2
+
+    st.markdown(
+        f"""
+        <style>
+            .reportview-container .main .block-container{{
+               max-width: 1200px;
+              padding-top: 5rem;
+              padding-right: 1rem;
+              padding-left: 1rem;
+              padding-bottom: 5rem;
+        }}  
+    </style>
+    """,
+        unsafe_allow_html=True,
+    )
+
     nltk.download("stopwords")
     nltk.download("punkt")
     stopwords = nltk.corpus.stopwords.words("english")
