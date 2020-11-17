@@ -16,7 +16,6 @@ GEO_TWEET_DIR = "geo_covid_tweets"
 
 
 def get_tweets(data_dir, state=None):
-
     if state:
         file = f"{TWEET_DATA_DIR}/{GEO_TWEET_DIR}/{state}.txt"
     else:
@@ -76,6 +75,22 @@ def flatten_list(list_of_lists):
     return [element for lst in list_of_lists for element in lst]
 
 
+def append_white_row(arr, top=True):
+    white_row = np.full((1, arr.shape[1], 3), 255)
+    if top:
+        return np.concatenate((arr, white_row))
+    else:
+        return np.concatenate((white_row, arr))
+
+
+def append_white_col(arr, left=True):
+    white_col = np.full((arr.shape[0], 1, 3), 255)
+    if left:
+        return np.concatenate((arr, white_col), axis=1)
+    else:
+        return np.concatenate((white_col, arr), axis=1)
+
+
 def get_state_mask(data_dir, state):
     if not state:
         return None
@@ -87,6 +102,14 @@ def get_state_mask(data_dir, state):
     mask = np.array(img, dtype='int')
     mask[mask > 10] = 255
     mask[mask != 255] = 0
+
+    # Add white rows and columns to edge of image to help with state border detection
+    for i in range(5):
+        mask = append_white_row(mask, True)
+        mask = append_white_row(mask, False)
+        mask = append_white_col(mask, True)
+        mask = append_white_col(mask, False)
+
     return mask
 
 
