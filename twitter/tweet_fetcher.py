@@ -9,7 +9,7 @@ from twitter.state_data_aggregator import STATE_TO_CODE_MAP
 from twitter.twitter_secret_fetcher import get_api_key, get_api_secret_key, get_access_token, get_access_token_secret
 
 # Percentage of COVID tweets to sample, there are 239,861,658 in total and roughly 2,000,000 with geo tags
-SAMPLE_PERCENTAGE = 1
+SAMPLE_PERCENTAGE = .0001
 # Directory containing files that have COVID tweet IDs
 # I left this out of the git repo because it takes a LONG time to push and pull. So if you want to run this, just
 # download it your self and place them in this directory
@@ -77,6 +77,10 @@ def get_tweets_by_state(api):
 
 
 def get_tweets(tweet_ids, api, use_geo_data=False, state=None):
+    # We add the timestamp to the file name as a unique identifier so we don't overwrite older files
+    ts = time.time()
+    # Only needed for tweets witout geo data
+    file_name = f"{COVID_TWEET_TEXT_DIR}/tweets_{ts}.txt"
     i = 0
     # Can only fetch tweets in batches of 100
     while i < len(tweet_ids):
@@ -100,7 +104,7 @@ def get_tweets(tweet_ids, api, use_geo_data=False, state=None):
         if use_geo_data:
             clean_and_flush_with_geo(tweets, state)
         else:
-            clean_and_flush_without_geo(tweets)
+            clean_and_flush_without_geo(tweets, file_name)
         i += 100
         print(f"finished tweet batch {int(i / 100)}")
 
@@ -137,19 +141,18 @@ def get_state_from_tweet(tweet):
         return state
 
 
-def clean_and_flush_without_geo(tweets):
-    # We add the timestamp to the file name as a unique identifier so we don't overwrite older files
-    ts = time.time()
-    file_name = f"{COVID_TWEET_TEXT_DIR}/tweets_{ts}.txt"
+def clean_and_flush_without_geo(tweets, file_name):
     # Limit to english tweets
     tweet_text = [clean_tweet(tweet) for tweet in tweets if tweet.lang == 'en']
     flush_list(tweet_text, file_name)
 
 
 def clean_tweet(tweet):
-    tweet_text = tweet.full_text
-    if tweet_text is None and tweet.retweeted_status:
+    try:
         tweet_text = tweet.retweeted_status.full_text
+    except AttributeError:  # Not a Retweet
+        tweet_text = tweet.full_text
+
     if tweet_text is None:
         tweet_text = tweet.text
     if tweet_text is None:
@@ -171,11 +174,11 @@ def get_html():
 
 
 def main():
-    # use_geo_location = True
-    # sampled_tweet_ids = sample_tweet_ids(use_geo_location)
+    use_geo_location = False
+    sampled_tweet_ids = sample_tweet_ids(use_geo_location)
     api = connect_to_twitter()
-    get_tweets_by_state(api)
-    # get_tweets(sampled_tweet_ids, api, use_geo_location, None)
+    # get_tweets_by_state(api)
+    get_tweets(sampled_tweet_ids, api, use_geo_location, None)
 
 
 if __name__ == "__main__":
