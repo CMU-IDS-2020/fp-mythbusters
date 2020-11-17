@@ -5,6 +5,7 @@ import time
 # http://docs.tweepy.org/en/latest/index.html
 import tweepy
 
+from twitter.state_data_aggregator import STATE_TO_CODE_MAP
 from twitter.twitter_secret_fetcher import get_api_key, get_api_secret_key, get_access_token, get_access_token_secret
 
 # Percentage of COVID tweets to sample, there are 239,861,658 in total and roughly 2,000,000 with geo tags
@@ -14,7 +15,7 @@ SAMPLE_PERCENTAGE = 1
 # download it your self and place them in this directory
 COVID_TWEET_ID_DIR = "../data/tweets/covid_tweet_ids"
 # COVID Tweet IDs with geo information
-GEO_COVID_TWEET_IDS = "../data/geo_covid_tweet_ids"
+GEO_COVID_TWEET_IDS = "../data/tweets/geo_covid_tweet_ids"
 # Directory containing files that have COVID tweet text
 COVID_TWEET_TEXT_DIR = "../data/tweets/covid_tweets"
 # Directory containing files that have COVID tweet text by state
@@ -65,42 +66,53 @@ def connect_to_twitter():
     return tweepy.API(auth)
 
 
-def get_tweets(tweet_ids, api, use_geo_data=False):
+def get_tweets_by_state(api):
+    for state, state_code in STATE_TO_CODE_MAP.items():
+        if os.path.exists(f"{GEO_COVID_TWEET_IDS}/geo/{state_code}.txt"):
+            with open(f"{GEO_COVID_TWEET_IDS}/geo/{state_code}.txt") as f:
+                tweet_ids = [tweet_id.strip() for tweet_id in f.readlines()]
+                print(f"Fetching tweets for {state}")
+                get_tweets(tweet_ids, api, True, state_code)
+                print(f"Done fetching tweets for {state}")
+
+
+def get_tweets(tweet_ids, api, use_geo_data=False, state=None):
     i = 0
     # Can only fetch tweets in batches of 100
     while i < len(tweet_ids):
         # Super hacky I know
         try:
-            tweets = api.statuses_lookup(tweet_ids[i:i + 100])
+            tweets = api.statuses_lookup(tweet_ids[i:i + 100], include_entities=True, tweet_mode='extended')
         except tweepy.RateLimitError:
             # In case we hit the rate limit wait 15 minutes and try again
             # https://developer.twitter.com/en/docs/twitter-api/v1/rate-limits
             time.sleep(15 * 60)
             try:
-                tweets = api.statuses_lookup(tweet_ids[i:i + 100], include_entities=True)
+                tweets = api.statuses_lookup(tweet_ids[i:i + 100], include_entities=True, tweet_mode='extended')
             except tweepy.error.TweepError:
                 pass
         except tweepy.error.TweepError:
             try:
-                tweets = api.statuses_lookup(tweet_ids[i:i + 100], include_entities=True)
+                tweets = api.statuses_lookup(tweet_ids[i:i + 100], include_entities=True, tweet_mode='extended')
             except:
                 pass
 
         if use_geo_data:
-            clean_and_flush_with_geo(tweets)
+            clean_and_flush_with_geo(tweets, state)
         else:
             clean_and_flush_without_geo(tweets)
         i += 100
         print(f"finished tweet batch {int(i / 100)}")
 
 
-def clean_and_flush_with_geo(tweets):
+def clean_and_flush_with_geo(tweets, state=None):
     tweets_by_state = {}
     filtered_tweets = [tweet for tweet in tweets if
                        tweet.lang == 'en' and tweet.place and tweet.place.country_code == 'US']
     for tweet in filtered_tweets:
 
-        state = get_state_from_tweet(tweet)
+        if state is None:
+            state = get_state_from_tweet(tweet)
         if state:
             if state in tweets_by_state:
                 tweets_by_state[state].append(tweet)
@@ -110,7 +122,7 @@ def clean_and_flush_with_geo(tweets):
     for state, tweets in tweets_by_state.items():
         tweet_ids = [tweet.id for tweet in tweets]
         flush_list(tweet_ids, f"{GEO_COVID_TWEET_IDS}/geo/{state}.txt")
-        tweet_texts = [clean_tweet(tweet.text) for tweet in tweets]
+        tweet_texts = [clean_tweet(tweet) for tweet in tweets]
         flush_list(tweet_texts, f"{GEO_COVID_TWEET_TEXT_DIR}/{state}.txt")
 
 
@@ -130,13 +142,21 @@ def clean_and_flush_without_geo(tweets):
     ts = time.time()
     file_name = f"{COVID_TWEET_TEXT_DIR}/tweets_{ts}.txt"
     # Limit to english tweets
-    tweet_text = [clean_tweet(tweet.text) for tweet in tweets if tweet.lang == 'en']
+    tweet_text = [clean_tweet(tweet) for tweet in tweets if tweet.lang == 'en']
     flush_list(tweet_text, file_name)
 
 
 def clean_tweet(tweet):
+    tweet_text = tweet.full_text
+    if tweet_text is None and tweet.retweeted_status:
+        tweet_text = tweet.retweeted_status.full_text
+    if tweet_text is None:
+        tweet_text = tweet.text
+    if tweet_text is None:
+        return ""
     # Remove new lines from tweet so tweet fits on a single line
-    return tweet.replace('\n', '').replace('\r', '')
+    # TODO consider removing mentions
+    return tweet_text.replace('\n', '').replace('\r', '')
 
 
 def flush_list(list_, file_name):
@@ -151,12 +171,12 @@ def get_html():
 
 
 def main():
-    use_geo_location = True
-    sampled_tweet_ids = sample_tweet_ids(use_geo_location)
+    # use_geo_location = True
+    # sampled_tweet_ids = sample_tweet_ids(use_geo_location)
     api = connect_to_twitter()
-    get_tweets(sampled_tweet_ids, api, use_geo_location)
+    get_tweets_by_state(api)
+    # get_tweets(sampled_tweet_ids, api, use_geo_location, None)
 
 
 if __name__ == "__main__":
-    # main()
-    temp = get_html()
+    main()
