@@ -8,6 +8,7 @@ from vega_datasets import data
 import twitter.tweet_fetcher
 import twitter.word_cloud
 from twitter.state_data_aggregator import STATE_TO_CODE_MAP
+from twitter.tweet_fetcher import get_saved_tweet_oembeds
 
 from datetime import timedelta
 
@@ -201,6 +202,15 @@ def draw_state_counties():
     return selected_state
 
 
+def draw_embedded_tweets(state):
+    tweet_oembeds = get_saved_tweet_oembeds(DATA_DIR, state)
+    with st.beta_expander("Example Tweets"):
+        cols = st.beta_columns(len(tweet_oembeds))
+        for idx, col in enumerate(cols):
+            with col:
+                st.markdown(tweet_oembeds[idx], unsafe_allow_html=True)
+
+
 def main():
     nltk.download("stopwords")
     nltk.download("punkt")
@@ -210,14 +220,7 @@ def main():
     selected_state = draw_state_counties()
     state_wordcloud = get_wordcloud(STATE_TO_CODE_MAP[selected_state.strip()], stopwords)
     st.pyplot(state_wordcloud)
-    st.write(
-        "This is just a random tweet sampled from NY for prototype purpose. In the final project we may want to embed a couple of tweets from each state")
-    html = '''
-        <blockquote class="twitter-tweet"><p lang="en" dir="ltr"><a href="https://twitter.com/hashtag/CoronaVirusNYC?src=hash&amp;ref_src=twsrc%5Etfw">#CoronaVirusNYC</a> <a href="https://twitter.com/hashtag/ChinaLiedAndPeopleDied?src=hash&amp;ref_src=twsrc%5Etfw">#ChinaLiedAndPeopleDied</a> <br><br>You honestly still believe Chinese Communist Party regarding <a href="https://twitter.com/hashtag/CoronaVirus?src=hash&amp;ref_src=twsrc%5Etfw">#CoronaVirus</a> / <a href="https://twitter.com/hashtag/COVID%E3%83%BC19?src=hash&amp;ref_src=twsrc%5Etfw">#COVIDー19</a> originating from someone eating a Bat Burger from Food Market in <a href="https://twitter.com/hashtag/Wuhan?src=hash&amp;ref_src=twsrc%5Etfw">#Wuhan</a> after seeing this...!!!<br><br>To, mae <a href="https://twitter.com/hashtag/COVID19?src=hash&amp;ref_src=twsrc%5Etfw">#COVID19</a> is likely more tragic &amp; sinister... <a href="https://t.co/EvVI5SXD1U">https://t.co/EvVI5SXD1U</a></p>&mdash; Darren Williams (@DazAltTheory) <a href="https://twitter.com/DazAltTheory/status/1248540485733552128?ref_src=twsrc%5Etfw">April 10, 2020</a></blockquote>
-        <script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
-    '''
-    st.write('https://twitter.com/DazAltTheory/status/1248540485733552128')
-    st.markdown(html, unsafe_allow_html=True)
+    draw_embedded_tweets(STATE_TO_CODE_MAP[selected_state.strip()])
 
 
 if __name__ == "__main__":
