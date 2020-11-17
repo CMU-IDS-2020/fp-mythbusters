@@ -67,7 +67,7 @@ def sample_all_state_tweet_ids():
 
 
 def sample_state_tweet_ids(state):
-    number_to_sample = 5
+    number_to_sample = 1
     file_name = f"{GEO_COVID_TWEET_IDS}/geo/{state}.txt"
     if os.path.exists(file_name):
         with open(file_name) as f:

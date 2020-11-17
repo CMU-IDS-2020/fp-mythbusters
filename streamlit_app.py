@@ -1,7 +1,9 @@
+from datetime import timedelta
+
 import altair as alt
 import matplotlib.pyplot as plt
-import pandas as pd
 import nltk
+import pandas as pd
 import streamlit as st
 from vega_datasets import data
 
@@ -9,8 +11,6 @@ import twitter.tweet_fetcher
 import twitter.word_cloud
 from twitter.state_data_aggregator import STATE_TO_CODE_MAP
 from twitter.tweet_fetcher import get_saved_tweet_oembeds
-
-from datetime import timedelta
 
 DATA_DIR = "data"
 
@@ -34,7 +34,8 @@ def load_state_fips():
 @st.cache(allow_output_mutation=True)
 def load_usda_data():
     poverty = pd.read_csv("data/usda_county_datasets/clean/poverty_2018.csv", index_col=0)
-    unemployment_median_hhi = pd.read_csv("data/usda_county_datasets/clean/unemployment_median_hhi_2018.csv", index_col=0)
+    unemployment_median_hhi = pd.read_csv("data/usda_county_datasets/clean/unemployment_median_hhi_2018.csv",
+                                          index_col=0)
     population = pd.read_csv("data/usda_county_datasets/clean/population_2018.csv", index_col=0)
     education = pd.read_csv("data/usda_county_datasets/clean/education_2018.csv", index_col=0)
     usda_data = {
@@ -48,30 +49,39 @@ def load_usda_data():
 
 @st.cache(allow_output_mutation=True)
 def load_covid_data():
-
     # Read in data from local csv files
-    confirmed_cumulative_cases_prop_fips = pd.read_csv("data/covid_usafacts/clean/confirmed_cumulative_cases_props_fips.csv", index_col=0)
-    confirmed_daily_incidence_cases_prop_fips = pd.read_csv("data/covid_usafacts/clean/confirmed_daily_incidence_cases_prop_fips.csv", index_col=0)
+    confirmed_cumulative_cases_prop_fips = pd.read_csv(
+        "data/covid_usafacts/clean/confirmed_cumulative_cases_props_fips.csv", index_col=0)
+    confirmed_daily_incidence_cases_prop_fips = pd.read_csv(
+        "data/covid_usafacts/clean/confirmed_daily_incidence_cases_prop_fips.csv", index_col=0)
     cumulative_deaths_prop_fips = pd.read_csv("data/covid_usafacts/clean/cumulative_deaths_prop_fips.csv", index_col=0)
-    daily_incidence_deaths_prop_fips = pd.read_csv("data/covid_usafacts/clean/daily_incidence_deaths_prop_fips.csv", index_col=0)
+    daily_incidence_deaths_prop_fips = pd.read_csv("data/covid_usafacts/clean/daily_incidence_deaths_prop_fips.csv",
+                                                   index_col=0)
 
     # Remove rows with values < 0.0 (not possible)
-    confirmed_cumulative_cases_prop_fips = confirmed_cumulative_cases_prop_fips[confirmed_cumulative_cases_prop_fips["value"] >= 0.0]
-    confirmed_daily_incidence_cases_prop_fips = confirmed_daily_incidence_cases_prop_fips[confirmed_daily_incidence_cases_prop_fips["value"] >= 0.0]
+    confirmed_cumulative_cases_prop_fips = confirmed_cumulative_cases_prop_fips[
+        confirmed_cumulative_cases_prop_fips["value"] >= 0.0]
+    confirmed_daily_incidence_cases_prop_fips = confirmed_daily_incidence_cases_prop_fips[
+        confirmed_daily_incidence_cases_prop_fips["value"] >= 0.0]
     cumulative_deaths_prop_fips = cumulative_deaths_prop_fips[cumulative_deaths_prop_fips["value"] >= 0.0]
-    daily_incidence_deaths_prop_fips = daily_incidence_deaths_prop_fips[daily_incidence_deaths_prop_fips["value"] >= 0.0]
+    daily_incidence_deaths_prop_fips = daily_incidence_deaths_prop_fips[
+        daily_incidence_deaths_prop_fips["value"] >= 0.0]
 
     # Convert all time_value columns into datetime
-    confirmed_cumulative_cases_prop_fips["time_value"] = pd.to_datetime(confirmed_cumulative_cases_prop_fips["time_value"])
-    confirmed_daily_incidence_cases_prop_fips["time_value"] = pd.to_datetime(confirmed_daily_incidence_cases_prop_fips["time_value"])
+    confirmed_cumulative_cases_prop_fips["time_value"] = pd.to_datetime(
+        confirmed_cumulative_cases_prop_fips["time_value"])
+    confirmed_daily_incidence_cases_prop_fips["time_value"] = pd.to_datetime(
+        confirmed_daily_incidence_cases_prop_fips["time_value"])
     cumulative_deaths_prop_fips["time_value"] = pd.to_datetime(cumulative_deaths_prop_fips["time_value"])
     daily_incidence_deaths_prop_fips["time_value"] = pd.to_datetime(daily_incidence_deaths_prop_fips["time_value"])
 
     # Only fetch most recent cumulative data
     confirmed_cumulative_cases_prop_fips = confirmed_cumulative_cases_prop_fips.sort_values("time_value")
-    confirmed_cumulative_cases_prop_fips = confirmed_cumulative_cases_prop_fips[~confirmed_cumulative_cases_prop_fips.duplicated("FIPS", keep='last')]
+    confirmed_cumulative_cases_prop_fips = confirmed_cumulative_cases_prop_fips[
+        ~confirmed_cumulative_cases_prop_fips.duplicated("FIPS", keep='last')]
     cumulative_deaths_prop_fips = cumulative_deaths_prop_fips.sort_values("time_value")
-    cumulative_deaths_prop_fips = cumulative_deaths_prop_fips[~cumulative_deaths_prop_fips.duplicated("FIPS", keep='last')]
+    cumulative_deaths_prop_fips = cumulative_deaths_prop_fips[
+        ~cumulative_deaths_prop_fips.duplicated("FIPS", keep='last')]
 
     covid_data = {
         'Cumulative Cases': confirmed_cumulative_cases_prop_fips,
@@ -139,32 +149,39 @@ def draw_state_counties():
     covid_date_ranges = get_covid_date_ranges(covid_data)
 
     # Select covid feature
-    selected_covid_feature = st.sidebar.selectbox('COVID Feature per 100,000 population', options=list(covid_data.keys()), index=1)
+    selected_covid_feature = st.sidebar.selectbox('COVID Feature per 100,000 population',
+                                                  options=list(covid_data.keys()), index=1)
     covid_df = covid_data.get(selected_covid_feature)
 
-    covid_df = covid_df[covid_df["FIPS"] // 1000 == selected_state_fips]  # filter for only counties in the selected state
+    covid_df = covid_df[
+        covid_df["FIPS"] // 1000 == selected_state_fips]  # filter for only counties in the selected state
 
     if 'Daily' in selected_covid_feature:
 
         # Select date range
         min_date, max_date = covid_date_ranges.get(selected_covid_feature)
-        selected_min_date = st.sidebar.date_input("From Date", value=max_date-timedelta(days=7), min_value=min_date, max_value=max_date, key="min_date")
-        selected_max_date = st.sidebar.date_input("To Date", value=max_date, min_value=min_date, max_value=max_date, key="max_date")
+        selected_min_date = st.sidebar.date_input("From Date", value=max_date - timedelta(days=7), min_value=min_date,
+                                                  max_value=max_date, key="min_date")
+        selected_max_date = st.sidebar.date_input("To Date", value=max_date, min_value=min_date, max_value=max_date,
+                                                  key="max_date")
         if selected_min_date > selected_max_date:
             st.error("ERROR: 'From Date' must be earlier or equal to 'To Date'")
 
-        st.write(selected_covid_feature + " per 100,000 population (%s through %s)" % (str(selected_min_date), str(selected_max_date)))
+        st.write(selected_covid_feature + " per 100,000 population (%s through %s)" % (
+        str(selected_min_date), str(selected_max_date)))
 
         # Select function for values in date range
         covid_date_range_functions = ["Max", "Min", "Average", "Median"]
-        selected_agg_function = st.sidebar.selectbox("Show for date range", options=covid_date_range_functions, index=covid_date_range_functions.index("Max"))
+        selected_agg_function = st.sidebar.selectbox("Show for date range", options=covid_date_range_functions,
+                                                     index=covid_date_range_functions.index("Max"))
 
         # Select rows within date range
-        covid_df = covid_df[(covid_df["time_value"] >= pd.Timestamp(selected_min_date)) & (covid_df["time_value"] <= pd.Timestamp(selected_max_date))]
+        covid_df = covid_df[(covid_df["time_value"] >= pd.Timestamp(selected_min_date)) & (
+                    covid_df["time_value"] <= pd.Timestamp(selected_max_date))]
 
         # Calculate aggregates for values in date range
-        covid_df = covid_df.groupby(['FIPS', 'Area Name'])['value']\
-            .agg(Min='min', Max='max', Average='mean', Median='median')\
+        covid_df = covid_df.groupby(['FIPS', 'Area Name'])['value'] \
+            .agg(Min='min', Max='max', Average='mean', Median='median') \
             .reset_index()
 
         # Create covid map based on COVID feature
@@ -178,11 +195,13 @@ def draw_state_counties():
             .transform_filter(alt.datum.state_id == selected_state_fips) \
             .transform_lookup(lookup='id', from_=alt.LookupData(covid_df,
                                                                 'FIPS',
-                                                                [selected_agg_function, 'time_value', 'issue', 'Area Name'])) \
+                                                                [selected_agg_function, 'time_value', 'issue',
+                                                                 'Area Name'])) \
             .properties(width=650, height=650)
 
     else:
-        st.write(selected_covid_feature + " per 100,000 population (Updated %s)" % str(covid_date_ranges.get(selected_covid_feature)[1]))
+        st.write(selected_covid_feature + " per 100,000 population (Updated %s)" % str(
+            covid_date_ranges.get(selected_covid_feature)[1]))
 
         covid_state_map = alt.Chart(data=counties) \
             .mark_geoshape(stroke='black', strokeWidth=1) \
@@ -205,10 +224,18 @@ def draw_state_counties():
 def draw_embedded_tweets(state):
     tweet_oembeds = get_saved_tweet_oembeds(DATA_DIR, state)
     with st.beta_expander("Example Tweets"):
-        cols = st.beta_columns(len(tweet_oembeds))
-        for idx, col in enumerate(cols):
-            with col:
-                st.markdown(tweet_oembeds[idx], unsafe_allow_html=True)
+        num_tweets = len(tweet_oembeds)
+        half_num = int(num_tweets / 2)
+        # Two rows are good for now with 6 tweets
+        row1 = st.beta_columns(half_num)
+        row2 = st.beta_columns(num_tweets - half_num)
+        for i in range(num_tweets):
+            if i < half_num:
+                with row1[i]:
+                    st.markdown(tweet_oembeds[i], unsafe_allow_html=True)
+            else:
+                with row2[i - half_num]:
+                    st.markdown(tweet_oembeds[i], unsafe_allow_html=True)
 
 
 def main():
