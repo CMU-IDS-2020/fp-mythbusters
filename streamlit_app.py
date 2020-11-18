@@ -155,7 +155,7 @@ def draw_state_counties():
     covid_date_ranges = get_covid_date_ranges(covid_data)
 
     # Select covid feature
-    selected_covid_feature = col2.selectbox('COVID Feature per 100,000 population', options=list(covid_data.keys()), index=1)
+    selected_covid_feature = col2.selectbox('COVID Feature per 100,000 population', options=list(covid_data.keys()), index=0)
 
     covid_df = covid_data.get(selected_covid_feature)
 
@@ -207,7 +207,7 @@ def draw_state_counties():
         col2.write(selected_covid_feature + " per 100,000 population\n(Updated %s)" % str(covid_date_ranges.get(selected_covid_feature)[1]))
 
         # find correlation between the feature and the COVID stats
-        full_df = covid_df.merge(usda_df, on = "Area Name")
+        full_df = covid_df.merge(usda_df, on="FIPS")
         correlation = np.corrcoef(full_df["value"], full_df[selected_usda_feature])
 
         covid_state_map = alt.Chart(data=counties) \
@@ -253,7 +253,7 @@ def draw_state_counties():
         corr_plot = alt.Chart(full_df).mark_point().encode(
             x=alt.X("value:Q", axis=alt.Axis(title=selected_covid_feature+" per 100,000")),
             y=selected_usda_feature+":Q",
-            tooltip=[alt.Tooltip("Area Name:N", title="County")]
+            tooltip=[alt.Tooltip("Area Name_x:N", title="County")]
         ).properties(width=800, height=500)
         corr_plot = corr_plot+corr_plot.transform_regression("value", selected_usda_feature, method="linear").mark_line(color="#000000")
         st.write(corr_plot)
