@@ -226,7 +226,7 @@ def get_saved_tweet_oembeds(data_dir, state):
     directory = f"{data_dir}/{GEO_OEMBEDS}/{state}"
     for file_name in os.listdir(directory):
         if os.path.isfile(os.path.join(directory, file_name)):
-            with open(f"{directory}/{file_name}") as f:
+            with open(f"{directory}/{file_name}", encoding="utf-8") as f:
                 lines = f.readlines()
                 html = "\n".join(lines)
                 tweet_oembeds.append(html)
