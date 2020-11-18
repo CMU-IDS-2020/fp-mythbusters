@@ -267,8 +267,8 @@ def draw_embedded_tweets(state):
         num_tweets = len(tweet_oembeds)
         half_num = int(num_tweets / 2)
         # Two rows are good for now with 6 tweets
-        row1 = st.beta_columns(half_num)
-        row2 = st.beta_columns(num_tweets - half_num)
+        row1 = st.beta_columns(half_num) if half_num > 0 else []
+        row2 = st.beta_columns(num_tweets - half_num) if num_tweets - half_num > 0 else []
         for i in range(num_tweets):
             if i < half_num:
                 with row1[i]:
