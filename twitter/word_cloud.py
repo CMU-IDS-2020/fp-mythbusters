@@ -21,7 +21,7 @@ def get_tweets(data_dir, state=None):
         file = f"{TWEET_DATA_DIR}/{GEO_TWEET_DIR}/{state}.txt"
     else:
         file = f"{TWEET_DATA_DIR}/{TWEET_FILE}"
-    with open(f"{data_dir}/{file}") as f:
+    with open(f"{data_dir}/{file}", encoding="utf-8") as f:
         return f.readlines()
 
 
