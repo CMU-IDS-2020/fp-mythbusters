@@ -10,7 +10,7 @@ venv/
 # Cached bytecode
 */__pycache__/
 
-# COVID Tweet IDs
+# COVID Tweet IDs. There's a lot which make git pushing and pulling slow
 data/tweets/covid_tweet_ids/
 
 # DS_Store files for subdirectories

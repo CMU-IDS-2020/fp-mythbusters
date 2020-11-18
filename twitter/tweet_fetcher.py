@@ -5,20 +5,23 @@ import time
 # http://docs.tweepy.org/en/latest/index.html
 import tweepy
 
+from twitter.state_data_aggregator import STATE_TO_CODE_MAP
 from twitter.twitter_secret_fetcher import get_api_key, get_api_secret_key, get_access_token, get_access_token_secret
 
 # Percentage of COVID tweets to sample, there are 239,861,658 in total and roughly 2,000,000 with geo tags
-SAMPLE_PERCENTAGE = 1
+SAMPLE_PERCENTAGE = .0001
 # Directory containing files that have COVID tweet IDs
 # I left this out of the git repo because it takes a LONG time to push and pull. So if you want to run this, just
 # download it your self and place them in this directory
 COVID_TWEET_ID_DIR = "../data/tweets/covid_tweet_ids"
 # COVID Tweet IDs with geo information
-GEO_COVID_TWEET_IDS = "../data/geo_covid_tweet_ids"
+GEO_COVID_TWEET_IDS = "../data/tweets/geo_covid_tweet_ids"
 # Directory containing files that have COVID tweet text
 COVID_TWEET_TEXT_DIR = "../data/tweets/covid_tweets"
 # Directory containing files that have COVID tweet text by state
 GEO_COVID_TWEET_TEXT_DIR = "../data/tweets/geo_covid_tweets"
+# Directory with embedded tweet html
+GEO_OEMBEDS = "tweets/geo_oembeds"
 
 
 ###############################################
@@ -55,6 +58,26 @@ def should_sample():
     return random.random() < SAMPLE_PERCENTAGE * 2
 
 
+def sample_all_state_tweet_ids():
+    state_tweet_ids = {}
+    for _, code in STATE_TO_CODE_MAP.items():
+        state_tweet_ids[code] = sample_state_tweet_ids(code)
+        print(f"Done sampling tweet ids from {code}")
+    return state_tweet_ids
+
+
+def sample_state_tweet_ids(state):
+    number_to_sample = 1
+    file_name = f"{GEO_COVID_TWEET_IDS}/geo/{state}.txt"
+    if os.path.exists(file_name):
+        with open(file_name) as f:
+            tweet_ids = f.readlines()
+            random.shuffle(tweet_ids)
+            return tweet_ids[:number_to_sample]
+    else:
+        return []
+
+
 ###############################################
 # Get Tweets From Twitter API
 ###############################################
@@ -65,42 +88,57 @@ def connect_to_twitter():
     return tweepy.API(auth)
 
 
-def get_tweets(tweet_ids, api, use_geo_data=False):
+def get_tweets_by_state(api):
+    for state, state_code in STATE_TO_CODE_MAP.items():
+        if os.path.exists(f"{GEO_COVID_TWEET_IDS}/geo/{state_code}.txt"):
+            with open(f"{GEO_COVID_TWEET_IDS}/geo/{state_code}.txt") as f:
+                tweet_ids = [tweet_id.strip() for tweet_id in f.readlines()]
+                print(f"Fetching tweets for {state}")
+                get_tweets(tweet_ids, api, True, state_code)
+                print(f"Done fetching tweets for {state}")
+
+
+def get_tweets(tweet_ids, api, use_geo_data=False, state=None):
+    # We add the timestamp to the file name as a unique identifier so we don't overwrite older files
+    ts = time.time()
+    # Only needed for tweets witout geo data
+    file_name = f"{COVID_TWEET_TEXT_DIR}/tweets_{ts}.txt"
     i = 0
     # Can only fetch tweets in batches of 100
     while i < len(tweet_ids):
         # Super hacky I know
         try:
-            tweets = api.statuses_lookup(tweet_ids[i:i + 100])
+            tweets = api.statuses_lookup(tweet_ids[i:i + 100], include_entities=True, tweet_mode='extended')
         except tweepy.RateLimitError:
             # In case we hit the rate limit wait 15 minutes and try again
             # https://developer.twitter.com/en/docs/twitter-api/v1/rate-limits
             time.sleep(15 * 60)
             try:
-                tweets = api.statuses_lookup(tweet_ids[i:i + 100], include_entities=True)
+                tweets = api.statuses_lookup(tweet_ids[i:i + 100], include_entities=True, tweet_mode='extended')
             except tweepy.error.TweepError:
                 pass
         except tweepy.error.TweepError:
             try:
-                tweets = api.statuses_lookup(tweet_ids[i:i + 100], include_entities=True)
+                tweets = api.statuses_lookup(tweet_ids[i:i + 100], include_entities=True, tweet_mode='extended')
             except:
                 pass
 
         if use_geo_data:
-            clean_and_flush_with_geo(tweets)
+            clean_and_flush_with_geo(tweets, state)
         else:
-            clean_and_flush_without_geo(tweets)
+            clean_and_flush_without_geo(tweets, file_name)
         i += 100
         print(f"finished tweet batch {int(i / 100)}")
 
 
-def clean_and_flush_with_geo(tweets):
+def clean_and_flush_with_geo(tweets, state=None):
     tweets_by_state = {}
     filtered_tweets = [tweet for tweet in tweets if
                        tweet.lang == 'en' and tweet.place and tweet.place.country_code == 'US']
     for tweet in filtered_tweets:
 
-        state = get_state_from_tweet(tweet)
+        if state is None:
+            state = get_state_from_tweet(tweet)
         if state:
             if state in tweets_by_state:
                 tweets_by_state[state].append(tweet)
@@ -110,7 +148,7 @@ def clean_and_flush_with_geo(tweets):
     for state, tweets in tweets_by_state.items():
         tweet_ids = [tweet.id for tweet in tweets]
         flush_list(tweet_ids, f"{GEO_COVID_TWEET_IDS}/geo/{state}.txt")
-        tweet_texts = [clean_tweet(tweet.text) for tweet in tweets]
+        tweet_texts = [clean_tweet(tweet) for tweet in tweets]
         flush_list(tweet_texts, f"{GEO_COVID_TWEET_TEXT_DIR}/{state}.txt")
 
 
@@ -125,38 +163,86 @@ def get_state_from_tweet(tweet):
         return state
 
 
-def clean_and_flush_without_geo(tweets):
-    # We add the timestamp to the file name as a unique identifier so we don't overwrite older files
-    ts = time.time()
-    file_name = f"{COVID_TWEET_TEXT_DIR}/tweets_{ts}.txt"
+def clean_and_flush_without_geo(tweets, file_name):
     # Limit to english tweets
-    tweet_text = [clean_tweet(tweet.text) for tweet in tweets if tweet.lang == 'en']
+    tweet_text = [clean_tweet(tweet) for tweet in tweets if tweet.lang == 'en']
     flush_list(tweet_text, file_name)
 
 
 def clean_tweet(tweet):
+    try:
+        tweet_text = tweet.retweeted_status.full_text
+    except AttributeError:  # Not a Retweet
+        tweet_text = tweet.full_text
+
+    if tweet_text is None:
+        tweet_text = tweet.text
+    if tweet_text is None:
+        return ""
     # Remove new lines from tweet so tweet fits on a single line
-    return tweet.replace('\n', '').replace('\r', '')
+    # TODO consider removing mentions
+    return tweet_text.replace('\n', '').replace('\r', '')
 
 
 def flush_list(list_, file_name):
     with open(file_name, "a+") as f:
-        f.writelines(f"{tweet}\n" for tweet in list_)
+        f.writelines(f"{elem}\n" for elem in list_)
 
 
-def get_html():
-    api = connect_to_twitter()
-    res = api.get_oembed(1248540485733552128)
-    return res["html"]
+def get_tweet_oembed(tweet_id, api):
+    # Super hacky I know
+    try:
+        tweet = api.get_oembed(tweet_id)
+    except tweepy.RateLimitError:
+        # In case we hit the rate limit wait 15 minutes and try again
+        # https://developer.twitter.com/en/docs/twitter-api/v1/rate-limits
+        time.sleep(15 * 60)
+        try:
+            tweet = api.get_oembed(tweet_id)
+        except tweepy.error.TweepError:
+            pass
+    except tweepy.error.TweepError:
+        try:
+            tweet = api.get_oembed(tweet_id)
+        except:
+            pass
+
+    return tweet["html"]
+
+
+def download_tweet_oembeds(api):
+    state_tweet_ids = sample_all_state_tweet_ids()
+    for state, tweet_ids in state_tweet_ids.items():
+        for tweet_id in tweet_ids:
+            tweet_html = get_tweet_oembed(tweet_id, api)
+            ts = time.time()
+            file_name = f"../data/{GEO_OEMBEDS}/{state}/{state}_{ts}.html"
+            flush_list([tweet_html], file_name)
+        print(f"Done fetching tweets for {state}")
+
+
+def get_saved_tweet_oembeds(data_dir, state):
+    tweet_oembeds = []
+    directory = f"{data_dir}/{GEO_OEMBEDS}/{state}"
+    for file_name in os.listdir(directory):
+        if os.path.isfile(os.path.join(directory, file_name)):
+            with open(f"{directory}/{file_name}", encoding="utf-8") as f:
+                lines = f.readlines()
+                html = "\n".join(lines)
+                tweet_oembeds.append(html)
+    return tweet_oembeds
 
 
 def main():
-    use_geo_location = True
-    sampled_tweet_ids = sample_tweet_ids(use_geo_location)
+    # use_geo_location = False
+    # sampled_tweet_ids = sample_tweet_ids(use_geo_location)
     api = connect_to_twitter()
-    get_tweets(sampled_tweet_ids, api, use_geo_location)
+    # get_tweets_by_state(api)
+    # get_tweets(sampled_tweet_ids, api, use_geo_location, None)
+    download_tweet_oembeds(api)
 
 
 if __name__ == "__main__":
-    # main()
-    temp = get_html()
+    main()
+    # for state, code in STATE_TO_CODE_MAP.items():
+    #     os.makedirs(f"{GEO_OEMBEDS}/{code}")

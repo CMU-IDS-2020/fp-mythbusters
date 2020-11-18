@@ -1,7 +1,9 @@
+from datetime import timedelta
+
 import altair as alt
 import matplotlib.pyplot as plt
-import pandas as pd
 import nltk
+import pandas as pd
 import streamlit as st
 from vega_datasets import data
 import numpy as np
@@ -9,8 +11,7 @@ import numpy as np
 import twitter.tweet_fetcher
 import twitter.word_cloud
 from twitter.state_data_aggregator import STATE_TO_CODE_MAP
-
-from datetime import timedelta
+from twitter.tweet_fetcher import get_saved_tweet_oembeds
 
 DATA_DIR = "data"
 
@@ -34,7 +35,8 @@ def load_state_fips():
 @st.cache(allow_output_mutation=True)
 def load_usda_data():
     poverty = pd.read_csv("data/usda_county_datasets/clean/poverty_2018.csv", index_col=0)
-    unemployment_median_hhi = pd.read_csv("data/usda_county_datasets/clean/unemployment_median_hhi_2018.csv", index_col=0)
+    unemployment_median_hhi = pd.read_csv("data/usda_county_datasets/clean/unemployment_median_hhi_2018.csv",
+                                          index_col=0)
     population = pd.read_csv("data/usda_county_datasets/clean/population_2018.csv", index_col=0)
     education = pd.read_csv("data/usda_county_datasets/clean/education_2018.csv", index_col=0)
     usda_data = {
@@ -48,30 +50,39 @@ def load_usda_data():
 
 @st.cache(allow_output_mutation=True)
 def load_covid_data():
-
     # Read in data from local csv files
-    confirmed_cumulative_cases_prop_fips = pd.read_csv("data/covid_usafacts/clean/confirmed_cumulative_cases_props_fips.csv", index_col=0)
-    confirmed_daily_incidence_cases_prop_fips = pd.read_csv("data/covid_usafacts/clean/confirmed_daily_incidence_cases_prop_fips.csv", index_col=0)
+    confirmed_cumulative_cases_prop_fips = pd.read_csv(
+        "data/covid_usafacts/clean/confirmed_cumulative_cases_props_fips.csv", index_col=0)
+    confirmed_daily_incidence_cases_prop_fips = pd.read_csv(
+        "data/covid_usafacts/clean/confirmed_daily_incidence_cases_prop_fips.csv", index_col=0)
     cumulative_deaths_prop_fips = pd.read_csv("data/covid_usafacts/clean/cumulative_deaths_prop_fips.csv", index_col=0)
-    daily_incidence_deaths_prop_fips = pd.read_csv("data/covid_usafacts/clean/daily_incidence_deaths_prop_fips.csv", index_col=0)
+    daily_incidence_deaths_prop_fips = pd.read_csv("data/covid_usafacts/clean/daily_incidence_deaths_prop_fips.csv",
+                                                   index_col=0)
 
     # Remove rows with values < 0.0 (not possible)
-    confirmed_cumulative_cases_prop_fips = confirmed_cumulative_cases_prop_fips[confirmed_cumulative_cases_prop_fips["value"] >= 0.0]
-    confirmed_daily_incidence_cases_prop_fips = confirmed_daily_incidence_cases_prop_fips[confirmed_daily_incidence_cases_prop_fips["value"] >= 0.0]
+    confirmed_cumulative_cases_prop_fips = confirmed_cumulative_cases_prop_fips[
+        confirmed_cumulative_cases_prop_fips["value"] >= 0.0]
+    confirmed_daily_incidence_cases_prop_fips = confirmed_daily_incidence_cases_prop_fips[
+        confirmed_daily_incidence_cases_prop_fips["value"] >= 0.0]
     cumulative_deaths_prop_fips = cumulative_deaths_prop_fips[cumulative_deaths_prop_fips["value"] >= 0.0]
-    daily_incidence_deaths_prop_fips = daily_incidence_deaths_prop_fips[daily_incidence_deaths_prop_fips["value"] >= 0.0]
+    daily_incidence_deaths_prop_fips = daily_incidence_deaths_prop_fips[
+        daily_incidence_deaths_prop_fips["value"] >= 0.0]
 
     # Convert all time_value columns into datetime
-    confirmed_cumulative_cases_prop_fips["time_value"] = pd.to_datetime(confirmed_cumulative_cases_prop_fips["time_value"])
-    confirmed_daily_incidence_cases_prop_fips["time_value"] = pd.to_datetime(confirmed_daily_incidence_cases_prop_fips["time_value"])
+    confirmed_cumulative_cases_prop_fips["time_value"] = pd.to_datetime(
+        confirmed_cumulative_cases_prop_fips["time_value"])
+    confirmed_daily_incidence_cases_prop_fips["time_value"] = pd.to_datetime(
+        confirmed_daily_incidence_cases_prop_fips["time_value"])
     cumulative_deaths_prop_fips["time_value"] = pd.to_datetime(cumulative_deaths_prop_fips["time_value"])
     daily_incidence_deaths_prop_fips["time_value"] = pd.to_datetime(daily_incidence_deaths_prop_fips["time_value"])
 
     # Only fetch most recent cumulative data
     confirmed_cumulative_cases_prop_fips = confirmed_cumulative_cases_prop_fips.sort_values("time_value")
-    confirmed_cumulative_cases_prop_fips = confirmed_cumulative_cases_prop_fips[~confirmed_cumulative_cases_prop_fips.duplicated("FIPS", keep='last')]
+    confirmed_cumulative_cases_prop_fips = confirmed_cumulative_cases_prop_fips[
+        ~confirmed_cumulative_cases_prop_fips.duplicated("FIPS", keep='last')]
     cumulative_deaths_prop_fips = cumulative_deaths_prop_fips.sort_values("time_value")
-    cumulative_deaths_prop_fips = cumulative_deaths_prop_fips[~cumulative_deaths_prop_fips.duplicated("FIPS", keep='last')]
+    cumulative_deaths_prop_fips = cumulative_deaths_prop_fips[
+        ~cumulative_deaths_prop_fips.duplicated("FIPS", keep='last')]
 
     covid_data = {
         'Cumulative Cases': confirmed_cumulative_cases_prop_fips,
@@ -145,9 +156,11 @@ def draw_state_counties():
 
     # Select covid feature
     selected_covid_feature = col2.selectbox('COVID Feature per 100,000 population', options=list(covid_data.keys()), index=1)
+
     covid_df = covid_data.get(selected_covid_feature)
 
-    covid_df = covid_df[covid_df["FIPS"] // 1000 == selected_state_fips]  # filter for only counties in the selected state
+    covid_df = covid_df[
+        covid_df["FIPS"] // 1000 == selected_state_fips]  # filter for only counties in the selected state
 
     time_series = False # only do time series if we have a daily statistic
 
@@ -248,6 +261,23 @@ def draw_state_counties():
     return selected_state
 
 
+def draw_embedded_tweets(state):
+    tweet_oembeds = get_saved_tweet_oembeds(DATA_DIR, state)
+    with st.beta_expander("Example Tweets"):
+        num_tweets = len(tweet_oembeds)
+        half_num = int(num_tweets / 2)
+        # Two rows are good for now with 6 tweets
+        row1 = st.beta_columns(half_num)
+        row2 = st.beta_columns(num_tweets - half_num)
+        for i in range(num_tweets):
+            if i < half_num:
+                with row1[i]:
+                    st.markdown(tweet_oembeds[i], unsafe_allow_html=True)
+            else:
+                with row2[i - half_num]:
+                    st.markdown(tweet_oembeds[i], unsafe_allow_html=True)
+
+
 def main():
 
     # Source for adjusting container width in streamlit app
@@ -276,14 +306,7 @@ def main():
     selected_state = draw_state_counties()
     state_wordcloud = get_wordcloud(STATE_TO_CODE_MAP[selected_state.strip()], stopwords)
     st.pyplot(state_wordcloud)
-    st.write(
-        "This is just a random tweet sampled from NY for prototype purpose. In the final project we may want to embed a couple of tweets from each state")
-    html = '''
-        <blockquote class="twitter-tweet"><p lang="en" dir="ltr"><a href="https://twitter.com/hashtag/CoronaVirusNYC?src=hash&amp;ref_src=twsrc%5Etfw">#CoronaVirusNYC</a> <a href="https://twitter.com/hashtag/ChinaLiedAndPeopleDied?src=hash&amp;ref_src=twsrc%5Etfw">#ChinaLiedAndPeopleDied</a> <br><br>You honestly still believe Chinese Communist Party regarding <a href="https://twitter.com/hashtag/CoronaVirus?src=hash&amp;ref_src=twsrc%5Etfw">#CoronaVirus</a> / <a href="https://twitter.com/hashtag/COVID%E3%83%BC19?src=hash&amp;ref_src=twsrc%5Etfw">#COVIDー19</a> originating from someone eating a Bat Burger from Food Market in <a href="https://twitter.com/hashtag/Wuhan?src=hash&amp;ref_src=twsrc%5Etfw">#Wuhan</a> after seeing this...!!!<br><br>To, mae <a href="https://twitter.com/hashtag/COVID19?src=hash&amp;ref_src=twsrc%5Etfw">#COVID19</a> is likely more tragic &amp; sinister... <a href="https://t.co/EvVI5SXD1U">https://t.co/EvVI5SXD1U</a></p>&mdash; Darren Williams (@DazAltTheory) <a href="https://twitter.com/DazAltTheory/status/1248540485733552128?ref_src=twsrc%5Etfw">April 10, 2020</a></blockquote>
-        <script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
-    '''
-    st.write('https://twitter.com/DazAltTheory/status/1248540485733552128')
-    st.markdown(html, unsafe_allow_html=True)
+    draw_embedded_tweets(STATE_TO_CODE_MAP[selected_state.strip()])
 
 
 if __name__ == "__main__":
