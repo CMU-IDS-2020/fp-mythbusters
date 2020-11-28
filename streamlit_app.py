@@ -102,19 +102,23 @@ def get_covid_date_ranges(covid_data):
     return covid_date_ranges
 
 
-def get_usda_state_map(counties, usda_df, selected_usda_feature, selected_state_fips):
-    usda_state_map = alt.Chart(data=counties) \
-        .mark_geoshape(stroke='black', strokeWidth=1) \
-        .encode(color="%s:Q" % selected_usda_feature,
-                tooltip=[alt.Tooltip('id:N', title='FIPS'),
-                         alt.Tooltip('Area Name:N', title='Location'),
-                         alt.Tooltip('%s:Q' % selected_usda_feature, title='Value')]) \
-        .transform_calculate(state_id="(datum.id / 1000)|0") \
-        .transform_filter(alt.datum.state_id == selected_state_fips) \
-        .transform_lookup(lookup='id', from_=alt.LookupData(usda_df, 'FIPS', [selected_usda_feature, 'Area Name'])) \
-        .configure_legend(orient='bottom') \
-        .properties(width=400, height=400)
-    return usda_state_map
+def get_state_map_base(counties, selected_state_fips, selector):
+    return alt.Chart(data=counties)\
+        .mark_geoshape(stroke='black', strokeWidth=1)\
+        .transform_calculate(state_id="(datum.id/1000)|0")\
+        .transform_filter(alt.datum.state_id == selected_state_fips)\
+        .properties(width=400, height=400)\
+        .add_selection(selector)\
+        .encode(stroke=alt.condition(selector, alt.value('purple'), alt.value('black')),
+                strokeWidth=alt.condition(selector, alt.StrokeWidthValue(2.5), alt.StrokeWidthValue(1.0)))
+
+
+def get_specific_state_map(state_map_base, selected_feature, selected_feature_label, lookup_df, lookup_fields):
+    return state_map_base.encode(color="%s:Q" % selected_feature,
+                                 tooltip=[alt.Tooltip('id:N', title='FIPS'),
+                                          alt.Tooltip('Area Name:N', title='Location'),
+                                          alt.Tooltip('%s:Q' % selected_feature, title=selected_feature_label)])\
+        .transform_lookup(lookup='id', from_=alt.LookupData(lookup_df, 'FIPS', [selected_feature] + lookup_fields))
 
 
 def draw_state_counties():
@@ -144,7 +148,12 @@ def draw_state_counties():
     selected_usda_feature = col1.selectbox('USDA Feature', options=usda_features, index=0)
 
     # Create state map based on USDA feature
-    usda_state_map = get_usda_state_map(counties, usda_df, selected_usda_feature, selected_state_fips)
+    county_selector = alt.selection_single(on='mouseover', empty="none", fields=["id"])
+    state_map_base = get_state_map_base(counties, selected_state_fips, county_selector)
+    usda_state_map = get_specific_state_map(state_map_base,
+                                            selected_feature=selected_usda_feature,
+                                            selected_feature_label='Value',
+                                            lookup_df=usda_df, lookup_fields=['Area Name'])
 
     col1.write(selected_usda_category)
     col1.write("(%s)" % selected_usda_feature)
@@ -156,11 +165,8 @@ def draw_state_counties():
 
     # Select covid feature
     selected_covid_feature = col2.selectbox('COVID Feature per 100,000 population', options=list(covid_data.keys()), index=0)
-
     covid_df = covid_data.get(selected_covid_feature)
-
-    covid_df = covid_df[
-        covid_df["FIPS"] // 1000 == selected_state_fips]  # filter for only counties in the selected state
+    covid_df = covid_df[covid_df["FIPS"] // 1000 == selected_state_fips]  # filter for only counties in the selected state
 
     time_series = False # only do time series if we have a daily statistic
 
@@ -189,19 +195,10 @@ def draw_state_counties():
             .reset_index()
 
         # Create covid map based on COVID feature
-        covid_state_map = alt.Chart(data=counties) \
-            .mark_geoshape(stroke='black', strokeWidth=1) \
-            .encode(color="%s:Q" % selected_agg_function,
-                    tooltip=[alt.Tooltip('id:N', title='FIPS'),
-                             alt.Tooltip('Area Name:N', title='Location'),
-                             alt.Tooltip('%s:Q' % selected_agg_function, title=selected_agg_function)]) \
-            .transform_calculate(state_id="(datum.id / 1000)|0") \
-            .transform_filter(alt.datum.state_id == selected_state_fips) \
-            .transform_lookup(lookup='id', from_=alt.LookupData(covid_df,
-                                                                'FIPS',
-                                                                [selected_agg_function, 'time_value', 'issue', 'Area Name'])) \
-            .configure_legend(orient='bottom')\
-            .properties(width=400, height=400)
+        covid_state_map = get_specific_state_map(state_map_base,
+                                                 selected_feature=selected_agg_function,
+                                                 selected_feature_label=selected_agg_function,
+                                                 lookup_df=covid_df, lookup_fields=['time_value', 'issue', 'Area Name'])
 
     else:
         col2.write(selected_covid_feature + " per 100,000 population\n(Updated %s)" % str(covid_date_ranges.get(selected_covid_feature)[1]))
@@ -209,25 +206,13 @@ def draw_state_counties():
         # find correlation between the feature and the COVID stats
         full_df = covid_df.merge(usda_df, on="FIPS")
         correlation = np.corrcoef(full_df["value"], full_df[selected_usda_feature])
-
-        covid_state_map = alt.Chart(data=counties) \
-            .mark_geoshape(stroke='black', strokeWidth=1) \
-            .encode(color="%s:Q" % 'value',
-                    tooltip=[alt.Tooltip('id:N', title='FIPS'),
-                             alt.Tooltip('Area Name:N', title='Location'),
-                             alt.Tooltip('%s:Q' % 'value', title='Value')]) \
-            .transform_calculate(state_id="(datum.id / 1000)|0") \
-            .transform_filter(alt.datum.state_id == selected_state_fips) \
-            .transform_lookup(lookup='id', from_=alt.LookupData(covid_df,
-                                                                'FIPS',
-                                                                ['value', 'time_value', 'issue', 'Area Name'])) \
-            .configure_legend(orient='bottom')\
-            .properties(width=400, height=400)
+        covid_state_map = get_specific_state_map(state_map_base,
+                                                 selected_feature='value',
+                                                 selected_feature_label='Value',
+                                                 lookup_df=covid_df, lookup_fields=['time_value', 'issue', 'Area Name'])
 
     # make new columns so the maps are side-by-side
-    col3, col4 = st.beta_columns(2)
-    col3.write(usda_state_map)
-    col4.write(covid_state_map)
+    st.write(alt.hconcat(usda_state_map, covid_state_map).resolve_scale(color='independent').configure_legend(orient='bottom'))
 
     if time_series:
         # time series stuff
@@ -239,14 +224,14 @@ def draw_state_counties():
         else:
             covid_df_time_series = covid_df_pre_group[covid_df_pre_group["Area Name"].isin(selected_county)]
 
-        time_series = alt.Chart(covid_df_time_series).mark_line().encode(
+        time_series_chart = alt.Chart(covid_df_time_series).mark_line().encode(
             x=alt.X('time_value:T', axis=alt.Axis(title="Day", format=("%b %d, %Y"), labelAngle=-90)),
             y=alt.Y('value:Q', axis=alt.Axis(title="%s" % selected_covid_feature)),
             color=alt.Color("Area Name", legend=None),
             tooltip=[alt.Tooltip('Area Name:N', title="County")]
         ).properties(width=900, height=500)
 
-        st.write(time_series)
+        st.write(time_series_chart)
     else:
         # TODO: to make more of a "narrative", could have a table for each state and the correlation
         st.write("Correlation between %s per 100,000 and %s: %.4f" % (selected_covid_feature, selected_usda_feature, correlation[0,1]))
