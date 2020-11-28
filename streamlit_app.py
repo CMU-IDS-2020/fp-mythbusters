@@ -154,9 +154,9 @@ def draw_state_counties():
                                             selected_feature=selected_usda_feature,
                                             selected_feature_label='Value',
                                             lookup_df=usda_df, lookup_fields=['Area Name'])
-
-    col1.write(selected_usda_category)
-    col1.write("(%s)" % selected_usda_feature)
+    usda_state_map = usda_state_map.properties(
+        title="%s: %s" % (selected_usda_category, selected_usda_feature)
+    )
 
     # ----- Create COVID feature state map -----
     # Load COVID data
@@ -168,19 +168,18 @@ def draw_state_counties():
     covid_df = covid_data.get(selected_covid_feature)
     covid_df = covid_df[covid_df["FIPS"] // 1000 == selected_state_fips]  # filter for only counties in the selected state
 
-    time_series = False # only do time series if we have a daily statistic
+    time_series = False  # only do time series if we have a daily statistic
 
     if 'Daily' in selected_covid_feature:
         time_series = True
 
         # Select date range
         min_date, max_date = covid_date_ranges.get(selected_covid_feature)
+
         selected_min_date = col2.date_input("From Date", value=max_date-timedelta(days=7), min_value=min_date, max_value=max_date, key="min_date")
         selected_max_date = col2.date_input("To Date", value=max_date, min_value=min_date, max_value=max_date, key="max_date")
         if selected_min_date > selected_max_date:
             st.error("ERROR: 'From Date' must be earlier or equal to 'To Date'")
-
-        col2.write(selected_covid_feature + " per 100,000 population\n(%s through %s)" % (str(selected_min_date), str(selected_max_date)))
 
         # Select function for values in date range
         covid_date_range_functions = ["Max", "Min", "Average", "Median"]
@@ -199,19 +198,25 @@ def draw_state_counties():
                                                  selected_feature=selected_agg_function,
                                                  selected_feature_label=selected_agg_function,
                                                  lookup_df=covid_df, lookup_fields=['time_value', 'issue', 'Area Name'])
+        covid_state_map = covid_state_map.properties(
+            title="%s per 100,000 population" % selected_covid_feature
+        )
 
     else:
-        col2.write(selected_covid_feature + " per 100,000 population\n(Updated %s)" % str(covid_date_ranges.get(selected_covid_feature)[1]))
-
-        # find correlation between the feature and the COVID stats
-        full_df = covid_df.merge(usda_df, on="FIPS")
-        correlation = np.corrcoef(full_df["value"], full_df[selected_usda_feature])
+        col2.selectbox('Cumulative as of', options=[covid_date_ranges.get(selected_covid_feature)[1].strftime("%B %d, %Y")])
         covid_state_map = get_specific_state_map(state_map_base,
                                                  selected_feature='value',
                                                  selected_feature_label='Value',
                                                  lookup_df=covid_df, lookup_fields=['time_value', 'issue', 'Area Name'])
+        covid_state_map = covid_state_map.properties(
+            title="%s per 100,000 population" % selected_covid_feature
+        )
 
-    # make new columns so the maps are side-by-side
+        # find correlation between the feature and the COVID stats
+        full_df = covid_df.merge(usda_df, on="FIPS")
+        correlation = np.corrcoef(full_df["value"], full_df[selected_usda_feature])
+
+    # draw maps side-by-side
     st.write(alt.hconcat(usda_state_map, covid_state_map).resolve_scale(color='independent').configure_legend(orient='bottom'))
 
     if time_series:
