@@ -7,6 +7,7 @@ import pandas as pd
 import streamlit as st
 from vega_datasets import data
 import numpy as np
+from math import ceil, floor
 
 import twitter.tweet_fetcher
 import twitter.word_cloud
@@ -121,6 +122,10 @@ def get_specific_state_map(state_map_base, selected_feature, selected_feature_la
         .transform_lookup(lookup='id', from_=alt.LookupData(lookup_df, 'FIPS', [selected_feature] + lookup_fields))
 
 
+def round_to_nearest(number, nearest, roundup=True):
+    return int(ceil(number / nearest) * nearest) if roundup else int(floor(number / nearest) * nearest)
+
+
 def draw_state_counties():
     counties = alt.topo_feature(data.us_10m.url, 'counties')
 
@@ -148,8 +153,11 @@ def draw_state_counties():
     selected_usda_feature = col1.selectbox('USDA Feature', options=usda_features, index=0)
 
     # Create state map based on USDA feature
-    county_highlight = alt.selection_single(on='mouseover', empty="none", fields=["FIPS"])
-    county_multiselect = alt.selection_multi(empty="none", fields=["FIPS"])
+    select_all_btn = st.checkbox('Select all counties by default', value=True)
+    st.info('Hold Shift + click counties to only see their data on the chart below. Double-click map to reset selection.')
+    empty = "all" if select_all_btn else "none"
+    county_highlight = alt.selection_single(on='mouseover', empty=empty, fields=["FIPS"])
+    county_multiselect = alt.selection_multi(empty=empty, fields=["FIPS"])
     state_map_base = get_state_map_base(counties, selected_state_fips, county_highlight, county_multiselect)
     usda_state_map = get_specific_state_map(state_map_base,
                                             selected_feature=selected_usda_feature,
@@ -200,12 +208,23 @@ def draw_state_counties():
             title="%s per 100,000 population" % selected_covid_feature
         )
 
+        x_min = covid_df_pre_group['time_value'].min()
+        x_max = covid_df_pre_group['time_value'].max()
+        y_min = round_to_nearest(covid_df_pre_group['value'].min(), 10, roundup=False)
+        y_max = round_to_nearest(covid_df_pre_group['value'].max(), 10, roundup=True)
+
         covid_details_chart = alt.Chart(covid_df_pre_group).mark_line()\
-            .encode(x=alt.X('time_value:T', axis=alt.Axis(title="Day", format=("%b %d, %Y"), labelAngle=-90)),
-                    y=alt.Y('value:Q', axis=alt.Axis(title="%s" % selected_covid_feature)),
+            .encode(x=alt.X('time_value:T',
+                            axis=alt.Axis(title="Day", format=("%b %d, %Y"), labelAngle=-45),
+                            scale=alt.Scale(domain=[x_min, x_max])),
+                    y=alt.Y('value:Q',
+                            axis=alt.Axis(title="%s" % selected_covid_feature),
+                            scale=alt.Scale(domain=[y_min, y_max])),
                     color=alt.Color("Area Name", legend=None),
                     tooltip=[alt.Tooltip('Area Name:N', title="County")])\
-            .properties(title="Time series analysis for covid cases")
+            .properties(title="Time series analysis for covid cases")\
+            .add_selection(county_multiselect) \
+            .transform_filter(county_multiselect)
 
     else:
         col2.selectbox('Cumulative as of', options=[covid_date_ranges.get(selected_covid_feature)[1].strftime("%B %d, %Y")])
@@ -221,9 +240,17 @@ def draw_state_counties():
         full_df = covid_df.merge(usda_df, on="FIPS")
         correlation = np.corrcoef(full_df["value"], full_df[selected_usda_feature])
 
+        x_min = round_to_nearest(full_df['value'].min(), 10, roundup=False)
+        x_max = round_to_nearest(full_df['value'].max(), 10, roundup=True)
+        y_min = round_to_nearest(full_df[selected_usda_feature].min(), 10, roundup=False)
+        y_max = round_to_nearest(full_df[selected_usda_feature].max(), 10, roundup=True)
+
         covid_details_chart = alt.Chart(full_df).mark_point()\
-            .encode(x=alt.X("value:Q", axis=alt.Axis(title=selected_covid_feature + " per 100,000")),
-                    y=selected_usda_feature + ":Q",
+            .encode(x=alt.X("value:Q",
+                            axis=alt.Axis(title=selected_covid_feature + " per 100,000"),
+                            scale=alt.Scale(domain=[x_min, x_max])),
+                    y=alt.Y(selected_usda_feature + ":Q",
+                            scale=alt.Scale(domain=[y_min, y_max])),
                     tooltip=[alt.Tooltip("Area Name_x:N", title="County")])\
             .properties(title="Correlation between %s per 100,000 and %s: %.4f" % (
                             selected_covid_feature, selected_usda_feature, correlation[0, 1]))
@@ -233,14 +260,16 @@ def draw_state_counties():
                                   .transform_regression('value', selected_usda_feature, method='linear')\
                                   .mark_line(color="#000000")
 
+        covid_details_chart = covid_details_chart\
+            .add_selection(county_multiselect)\
+            .transform_filter(county_multiselect)
+
     # Draw maps side-by-side
     state_maps = alt.hconcat(usda_state_map, covid_state_map).resolve_scale(color='independent')
 
     # Draw covid details chart below maps
     covid_details_chart = covid_details_chart\
-        .properties(width=800, height=500)\
-        .add_selection(county_highlight, county_multiselect) \
-        .transform_filter(county_highlight | county_multiselect)
+        .properties(width=800, height=500)
 
     st.write(alt.vconcat(state_maps, covid_details_chart).configure_legend(orient='bottom'))
 
