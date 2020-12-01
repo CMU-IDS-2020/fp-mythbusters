@@ -104,14 +104,20 @@ def get_covid_date_ranges(covid_data):
 
 
 def get_state_map_base(counties, selected_state_fips, highlighter, multiselector):
-    return alt.Chart(data=counties)\
+    base = alt.Chart(data=counties)\
         .mark_geoshape(stroke='black', strokeWidth=1)\
         .transform_calculate(state_id="(datum.id/1000)|0", FIPS="datum.id")\
         .transform_filter(alt.datum.state_id == selected_state_fips)\
         .properties(width=400, height=400)\
         .add_selection(highlighter, multiselector)\
-        .encode(stroke=alt.condition(highlighter | multiselector, alt.value('purple'), alt.value('black')),
-                strokeWidth=alt.condition(highlighter | multiselector, alt.StrokeWidthValue(2.5), alt.StrokeWidthValue(1.0)))
+        .encode(stroke=alt.condition(highlighter | multiselector, alt.value('orange'), alt.value('black')),
+                strokeWidth=alt.condition(highlighter | multiselector, alt.StrokeWidthValue(2.2), alt.StrokeWidthValue(1.0)))
+
+    # Use albersUsa map for Alaska to fix zoom issue
+    if selected_state_fips == 2:
+        base = base.project(type='albersUsa')
+
+    return base
 
 
 def get_specific_state_map(state_map_base, selected_feature, selected_feature_label, lookup_df, lookup_fields):
@@ -132,7 +138,7 @@ def draw_state_counties():
     # Select US state to view
     state_fips_dict = load_state_fips()
     states = list(state_fips_dict.keys())
-    selected_state = st.sidebar.selectbox('US State', options=states, index=states.index("New York"))
+    selected_state = st.sidebar.selectbox('US State', options=states, index=states.index("Pennsylvania"))
     selected_state_fips = state_fips_dict.get(selected_state)
 
     col1, col2 = st.beta_columns(2)
