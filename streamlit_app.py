@@ -32,13 +32,30 @@ def get_wordcloud(tweets, state=None):
 
 
 @st.cache(allow_output_mutation=True)
-def get_word_df(words, state=None):
+def get_word_df(words):
     df = pd.DataFrame({"word": words})
     df = df.groupby("word").size().to_frame()
     df.reset_index(inplace=True)
     df.rename(columns={df.columns[1]: "count"}, inplace=True)
     df.sort_values("count", ascending=False, inplace=True)
     return df
+
+
+def draw_tweet_data(stopwords, representation, state=None):
+    cleaned_tweets = get_cleaned_tweet_words(state, stopwords)
+    if representation == "Word Cloud":
+        wordcloud = get_wordcloud(cleaned_tweets, state)
+        st.pyplot(wordcloud)
+    else:
+        title = f"{state} Tweets" if state else "Global Tweets"
+        bar_chart_size = 30
+        df = get_word_df(cleaned_tweets).head(bar_chart_size)
+        chart = alt.Chart(df).mark_bar().encode(
+            x=alt.X("word:N", sort="-y"),
+            y=alt.Y("count:Q"),
+
+        ).properties(title=title)
+        st.write(chart)
 
 
 @st.cache(allow_output_mutation=True)  # add caching so we load the data only once
@@ -339,20 +356,11 @@ def main():
     nltk.download("stopwords")
     nltk.download("punkt")
     stopwords = nltk.corpus.stopwords.words("english")
-    clean_global_tweets = get_cleaned_tweet_words(None, stopwords)
-    wordcloud = get_wordcloud(clean_global_tweets)
-    st.pyplot(wordcloud)
+    word_rep = st.sidebar.radio("Display tweets as: ", ("Word Cloud", "Bar Chart"))
+    draw_tweet_data(stopwords, word_rep, None)
     selected_state = draw_state_counties()
     state_code = STATE_TO_CODE_MAP[selected_state.strip()]
-    cleaned_state_tweets = get_cleaned_tweet_words(state_code, stopwords)
-    state_wordcloud = get_wordcloud(cleaned_state_tweets, state_code)
-    st.pyplot(state_wordcloud)
-    state_df = get_word_df(cleaned_state_tweets, state_code).head(10)
-    bar = alt.Chart(state_df).mark_bar().encode(
-        x=alt.X("word:N", sort="-y"),
-        y=alt.Y("count:Q")
-    )
-    st.write(bar)
+    draw_tweet_data(stopwords, word_rep, state_code)
     draw_embedded_tweets(STATE_TO_CODE_MAP[selected_state.strip()])
 
 
