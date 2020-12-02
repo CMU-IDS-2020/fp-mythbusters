@@ -232,7 +232,6 @@ def get_saved_tweet_oembeds(data_dir, state):
                 tweet_oembeds.append(html)
     return tweet_oembeds
 
-
 def main():
     # use_geo_location = False
     # sampled_tweet_ids = sample_tweet_ids(use_geo_location)

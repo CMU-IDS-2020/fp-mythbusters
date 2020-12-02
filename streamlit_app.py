@@ -1,13 +1,13 @@
 from datetime import timedelta
+from math import ceil, floor
 
 import altair as alt
 import matplotlib.pyplot as plt
 import nltk
+import numpy as np
 import pandas as pd
 import streamlit as st
 from vega_datasets import data
-import numpy as np
-from math import ceil, floor
 
 import twitter.tweet_fetcher
 import twitter.word_cloud
@@ -18,12 +18,27 @@ DATA_DIR = "data"
 
 
 @st.cache(allow_output_mutation=True)
-def get_wordcloud(state=None, stopwords=None):
-    wc = twitter.word_cloud.get_wordcloud(DATA_DIR, state, stopwords)
+def get_cleaned_tweet_words(state=None, stopwords=None):
+    return twitter.word_cloud.get_cleaned_tweet_words(DATA_DIR, state, stopwords)
+
+
+@st.cache(allow_output_mutation=True)
+def get_wordcloud(tweets, state=None):
+    wc = twitter.word_cloud.get_wordcloud(tweets, DATA_DIR, state)
     fig, ax = plt.subplots()
     ax.imshow(wc, interpolation='bilinear')
     ax.axis("off")
     return fig
+
+
+@st.cache(allow_output_mutation=True)
+def get_word_df(words, state=None):
+    df = pd.DataFrame({"word": words})
+    df = df.groupby("word").size().to_frame()
+    df.reset_index(inplace=True)
+    df.rename(columns={df.columns[1]: "count"}, inplace=True)
+    df.sort_values("count", ascending=False, inplace=True)
+    return df
 
 
 @st.cache(allow_output_mutation=True)  # add caching so we load the data only once
@@ -104,21 +119,22 @@ def get_covid_date_ranges(covid_data):
 
 
 def get_state_map_base(counties, selected_state_fips, highlighter, multiselector):
-    return alt.Chart(data=counties)\
-        .mark_geoshape(stroke='black', strokeWidth=1)\
-        .transform_calculate(state_id="(datum.id/1000)|0", FIPS="datum.id")\
-        .transform_filter(alt.datum.state_id == selected_state_fips)\
-        .properties(width=400, height=400)\
-        .add_selection(highlighter, multiselector)\
+    return alt.Chart(data=counties) \
+        .mark_geoshape(stroke='black', strokeWidth=1) \
+        .transform_calculate(state_id="(datum.id/1000)|0", FIPS="datum.id") \
+        .transform_filter(alt.datum.state_id == selected_state_fips) \
+        .properties(width=400, height=400) \
+        .add_selection(highlighter, multiselector) \
         .encode(stroke=alt.condition(highlighter | multiselector, alt.value('purple'), alt.value('black')),
-                strokeWidth=alt.condition(highlighter | multiselector, alt.StrokeWidthValue(2.5), alt.StrokeWidthValue(1.0)))
+                strokeWidth=alt.condition(highlighter | multiselector, alt.StrokeWidthValue(2.5),
+                                          alt.StrokeWidthValue(1.0)))
 
 
 def get_specific_state_map(state_map_base, selected_feature, selected_feature_label, lookup_df, lookup_fields):
     return state_map_base.encode(color="%s:Q" % selected_feature,
                                  tooltip=[alt.Tooltip('id:N', title='FIPS'),
                                           alt.Tooltip('Area Name:N', title='Location'),
-                                          alt.Tooltip('%s:Q' % selected_feature, title=selected_feature_label)])\
+                                          alt.Tooltip('%s:Q' % selected_feature, title=selected_feature_label)]) \
         .transform_lookup(lookup='id', from_=alt.LookupData(lookup_df, 'FIPS', [selected_feature] + lookup_fields))
 
 
@@ -154,7 +170,8 @@ def draw_state_counties():
 
     # Create state map based on USDA feature
     select_all_btn = st.checkbox('Select all counties by default', value=True)
-    st.info('Hold Shift + click counties to only see their data on the chart below. Double-click map to reset selection.')
+    st.info(
+        'Hold Shift + click counties to only see their data on the chart below. Double-click map to reset selection.')
     empty = "all" if select_all_btn else "none"
     county_highlight = alt.selection_single(on='mouseover', empty=empty, fields=["FIPS"])
     county_multiselect = alt.selection_multi(empty=empty, fields=["FIPS"])
@@ -173,30 +190,36 @@ def draw_state_counties():
     covid_date_ranges = get_covid_date_ranges(covid_data)
 
     # Select covid feature
-    selected_covid_feature = col2.selectbox('COVID Feature per 100,000 population', options=list(covid_data.keys()), index=0)
+    selected_covid_feature = col2.selectbox('COVID Feature per 100,000 population', options=list(covid_data.keys()),
+                                            index=0)
     covid_df = covid_data.get(selected_covid_feature)
-    covid_df = covid_df[covid_df["FIPS"] // 1000 == selected_state_fips]  # filter for only counties in the selected state
+    covid_df = covid_df[
+        covid_df["FIPS"] // 1000 == selected_state_fips]  # filter for only counties in the selected state
 
     if 'Daily' in selected_covid_feature:
 
         # Select date range
         min_date, max_date = covid_date_ranges.get(selected_covid_feature)
 
-        selected_min_date = col2.date_input("From Date", value=max_date-timedelta(days=7), min_value=min_date, max_value=max_date, key="min_date")
-        selected_max_date = col2.date_input("To Date", value=max_date, min_value=min_date, max_value=max_date, key="max_date")
+        selected_min_date = col2.date_input("From Date", value=max_date - timedelta(days=7), min_value=min_date,
+                                            max_value=max_date, key="min_date")
+        selected_max_date = col2.date_input("To Date", value=max_date, min_value=min_date, max_value=max_date,
+                                            key="max_date")
         if selected_min_date > selected_max_date:
             st.error("ERROR: 'From Date' must be earlier or equal to 'To Date'")
 
         # Select function for values in date range
         covid_date_range_functions = ["Max", "Min", "Average", "Median"]
-        selected_agg_function = col2.selectbox("Statistic for date range", options=covid_date_range_functions, index=covid_date_range_functions.index("Max"))
+        selected_agg_function = col2.selectbox("Statistic for date range", options=covid_date_range_functions,
+                                               index=covid_date_range_functions.index("Max"))
 
         # Select rows within date range
-        covid_df_pre_group = covid_df[(covid_df["time_value"] >= pd.Timestamp(selected_min_date)) & (covid_df["time_value"] <= pd.Timestamp(selected_max_date))]
+        covid_df_pre_group = covid_df[(covid_df["time_value"] >= pd.Timestamp(selected_min_date)) & (
+                covid_df["time_value"] <= pd.Timestamp(selected_max_date))]
 
         # Calculate aggregates for values in date range
-        covid_df = covid_df_pre_group.groupby(['FIPS', 'Area Name'])['value']\
-            .agg(Min='min', Max='max', Average='mean', Median='median')\
+        covid_df = covid_df_pre_group.groupby(['FIPS', 'Area Name'])['value'] \
+            .agg(Min='min', Max='max', Average='mean', Median='median') \
             .reset_index()
 
         # Create covid map based on COVID feature
@@ -213,7 +236,7 @@ def draw_state_counties():
         y_min = round_to_nearest(covid_df_pre_group['value'].min(), 10, roundup=False)
         y_max = round_to_nearest(covid_df_pre_group['value'].max(), 10, roundup=True)
 
-        covid_details_chart = alt.Chart(covid_df_pre_group).mark_line()\
+        covid_details_chart = alt.Chart(covid_df_pre_group).mark_line() \
             .encode(x=alt.X('time_value:T',
                             axis=alt.Axis(title="Day", format=("%b %d, %Y"), labelAngle=-45),
                             scale=alt.Scale(domain=[x_min, x_max])),
@@ -221,13 +244,14 @@ def draw_state_counties():
                             axis=alt.Axis(title="%s" % selected_covid_feature),
                             scale=alt.Scale(domain=[y_min, y_max])),
                     color=alt.Color("Area Name", legend=None),
-                    tooltip=[alt.Tooltip('Area Name:N', title="County")])\
-            .properties(title="Time series analysis for covid cases")\
+                    tooltip=[alt.Tooltip('Area Name:N', title="County")]) \
+            .properties(title="Time series analysis for covid cases") \
             .add_selection(county_multiselect) \
             .transform_filter(county_multiselect)
 
     else:
-        col2.selectbox('Cumulative as of', options=[covid_date_ranges.get(selected_covid_feature)[1].strftime("%B %d, %Y")])
+        col2.selectbox('Cumulative as of',
+                       options=[covid_date_ranges.get(selected_covid_feature)[1].strftime("%B %d, %Y")])
         covid_state_map = get_specific_state_map(state_map_base,
                                                  selected_feature='value',
                                                  selected_feature_label='Value',
@@ -245,30 +269,30 @@ def draw_state_counties():
         y_min = round_to_nearest(full_df[selected_usda_feature].min(), 10, roundup=False)
         y_max = round_to_nearest(full_df[selected_usda_feature].max(), 10, roundup=True)
 
-        covid_details_chart = alt.Chart(full_df).mark_point()\
+        covid_details_chart = alt.Chart(full_df).mark_point() \
             .encode(x=alt.X("value:Q",
                             axis=alt.Axis(title=selected_covid_feature + " per 100,000"),
                             scale=alt.Scale(domain=[x_min, x_max])),
                     y=alt.Y(selected_usda_feature + ":Q",
                             scale=alt.Scale(domain=[y_min, y_max])),
-                    tooltip=[alt.Tooltip("Area Name_x:N", title="County")])\
+                    tooltip=[alt.Tooltip("Area Name_x:N", title="County")]) \
             .properties(title="Correlation between %s per 100,000 and %s: %.4f" % (
-                            selected_covid_feature, selected_usda_feature, correlation[0, 1]))
+            selected_covid_feature, selected_usda_feature, correlation[0, 1]))
 
         covid_details_chart = covid_details_chart + \
                               covid_details_chart \
-                                  .transform_regression('value', selected_usda_feature, method='linear')\
+                                  .transform_regression('value', selected_usda_feature, method='linear') \
                                   .mark_line(color="#000000")
 
-        covid_details_chart = covid_details_chart\
-            .add_selection(county_multiselect)\
+        covid_details_chart = covid_details_chart \
+            .add_selection(county_multiselect) \
             .transform_filter(county_multiselect)
 
     # Draw maps side-by-side
     state_maps = alt.hconcat(usda_state_map, covid_state_map).resolve_scale(color='independent')
 
     # Draw covid details chart below maps
-    covid_details_chart = covid_details_chart\
+    covid_details_chart = covid_details_chart \
         .properties(width=800, height=500)
 
     st.write(alt.vconcat(state_maps, covid_details_chart).configure_legend(orient='bottom'))
@@ -294,7 +318,6 @@ def draw_embedded_tweets(state):
 
 
 def main():
-
     # Source for adjusting container width in streamlit app
     # https://discuss.streamlit.io/t/where-to-set-page-width-when-set-into-non-widescreeen-mode/959/2
 
@@ -316,11 +339,20 @@ def main():
     nltk.download("stopwords")
     nltk.download("punkt")
     stopwords = nltk.corpus.stopwords.words("english")
-    wordcloud = get_wordcloud(stopwords=stopwords)
+    clean_global_tweets = get_cleaned_tweet_words(None, stopwords)
+    wordcloud = get_wordcloud(clean_global_tweets)
     st.pyplot(wordcloud)
     selected_state = draw_state_counties()
-    state_wordcloud = get_wordcloud(STATE_TO_CODE_MAP[selected_state.strip()], stopwords)
+    state_code = STATE_TO_CODE_MAP[selected_state.strip()]
+    cleaned_state_tweets = get_cleaned_tweet_words(state_code, stopwords)
+    state_wordcloud = get_wordcloud(cleaned_state_tweets, state_code)
     st.pyplot(state_wordcloud)
+    state_df = get_word_df(cleaned_state_tweets, state_code).head(10)
+    bar = alt.Chart(state_df).mark_bar().encode(
+        x=alt.X("word:N", sort="-y"),
+        y=alt.Y("count:Q")
+    )
+    st.write(bar)
     draw_embedded_tweets(STATE_TO_CODE_MAP[selected_state.strip()])
 
 
