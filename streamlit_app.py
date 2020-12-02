@@ -166,11 +166,11 @@ def draw_state_counties():
     covid_date_ranges = get_covid_date_ranges(covid_data)
 
     # Select covid feature
-    selected_covid_feature = col2.selectbox('COVID Feature per 100,000 population', options=list(covid_data.keys()), index=0)
+    selected_covid_feature = col2.selectbox('COVID Feature', options=list(covid_data.keys()), index=0)
     covid_df = covid_data.get(selected_covid_feature)
     covid_df = covid_df[covid_df["FIPS"] // 1000 == selected_state_fips]  # filter for only counties in the selected state
 
-    if 'Daily' in selected_covid_feature:
+    if 'Cumulative' not in selected_covid_feature:
 
         # Select date range
         min_date, max_date = covid_date_ranges.get(selected_covid_feature)
