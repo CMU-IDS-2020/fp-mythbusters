@@ -113,8 +113,7 @@ def get_state_mask(data_dir, state):
     return mask
 
 
-def create_wordcloud(tweets, data_dir, state=None):
-    flat_tweets = flatten_list(tweets)
+def create_wordcloud(flat_tweets, data_dir, state=None):
     tweet_str = " ".join(flat_tweets)
     # TODO Consider saving this to a file with pickle so we don't have to recompute every time. Since the tweet files
     #  are static, then this should never change for the same tweet file.
@@ -128,13 +127,15 @@ def create_wordcloud(tweets, data_dir, state=None):
         return wordcloud.WordCloud().generate(tweet_str)
 
 
-def get_wordcloud(data_dir, state=None, stopwords=None):
-    nltk.download("stopwords", quiet=True)
-    nltk.download("punkt", quiet=True)
+def get_wordcloud(words, data_dir, state=None):
+    return create_wordcloud(words, data_dir, state)
+
+
+def get_cleaned_tweet_words(data_dir, state=None, stopwords=None):
     lemmatizer = WordNetLemmatizer()
     # stopwords = set(nltk.corpus.stopwords.words("english"))
     # In case we want to re-include spanish tweets
     # stopwords.union(nltk.corpus.stopwords.words("spanish"))
     tweets = get_tweets(data_dir, state)
     tweets = clean_tweets(tweets, lemmatizer, stopwords)
-    return create_wordcloud(tweets, data_dir, state)
+    return flatten_list(tweets)
