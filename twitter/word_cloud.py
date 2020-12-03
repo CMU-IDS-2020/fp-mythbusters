@@ -115,16 +115,16 @@ def get_state_mask(data_dir, state):
 
 def create_wordcloud(flat_tweets, data_dir, state=None):
     tweet_str = " ".join(flat_tweets)
-    # TODO Consider saving this to a file with pickle so we don't have to recompute every time. Since the tweet files
-    #  are static, then this should never change for the same tweet file.
-    #  Or we can save them to an image file and use that
-
     state_mask = get_state_mask(data_dir, state)
     if state_mask is not None:
-        return wordcloud.WordCloud(background_color="white", mask=state_mask, contour_width=2,
-                                   contour_color="steelblue").generate(tweet_str)
+        word_cloud = wordcloud.WordCloud(background_color="white", mask=state_mask, contour_width=2,
+                                         contour_color="steelblue", height=400, width=800).generate(tweet_str)
+        word_cloud.to_file(f"{data_dir}/word_clouds/{state}.jpg")
+        return word_cloud
     else:
-        return wordcloud.WordCloud().generate(tweet_str)
+        word_cloud = wordcloud.WordCloud().generate(tweet_str)
+        word_cloud.to_file(f"{data_dir}/word_clouds/World.jpg")
+        return word_cloud
 
 
 def get_wordcloud(words, data_dir, state=None):

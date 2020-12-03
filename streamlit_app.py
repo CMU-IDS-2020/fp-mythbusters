@@ -1,3 +1,4 @@
+import os
 from datetime import timedelta
 from math import ceil, floor
 
@@ -7,6 +8,7 @@ import nltk
 import numpy as np
 import pandas as pd
 import streamlit as st
+from PIL import Image
 from vega_datasets import data
 
 import twitter.tweet_fetcher
@@ -32,6 +34,16 @@ def get_wordcloud(tweets, state=None):
 
 
 @st.cache(allow_output_mutation=True)
+def get_wordcloud_from_file(state=None):
+    file_name = state if state else "World"
+    file_path = f"data/word_clouds/{file_name}.jpg"
+    if os.path.exists(file_path):
+        return Image.open(file_path)
+    else:
+        return None
+
+
+@st.cache(allow_output_mutation=True)
 def get_word_df(words):
     df = pd.DataFrame({"word": words})
     df = df.groupby("word").size().to_frame()
@@ -42,13 +54,18 @@ def get_word_df(words):
 
 
 def draw_tweet_data(stopwords, representation, state=None):
-    cleaned_tweets = get_cleaned_tweet_words(state, stopwords)
     if representation == "Word Cloud":
-        wordcloud = get_wordcloud(cleaned_tweets, state)
-        st.pyplot(wordcloud)
+        cached_pic = get_wordcloud_from_file(state)
+        if cached_pic:
+            st.image(cached_pic, width=600)
+        else:
+            cleaned_tweets = get_cleaned_tweet_words(state, stopwords)
+            wordcloud = get_wordcloud(cleaned_tweets, state)
+            st.pyplot(wordcloud)
     else:
+        cleaned_tweets = get_cleaned_tweet_words(state, stopwords)
         title = f"{state} Tweets" if state else "Global Tweets"
-        bar_chart_size = 30
+        bar_chart_size = 50
         df = get_word_df(cleaned_tweets).head(bar_chart_size)
         chart = alt.Chart(df).mark_bar().encode(
             x=alt.X("word:N", sort="-y"),
