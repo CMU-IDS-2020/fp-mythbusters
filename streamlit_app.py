@@ -81,50 +81,43 @@ def load_usda_data():
     return usda_data
 
 
-@st.cache(allow_output_mutation=True)
-def load_covid_data():
-    # Read in data from local csv files
-    confirmed_cumulative_cases_prop_fips = pd.read_csv(
-        "data/covid_usafacts/clean/confirmed_cumulative_cases_props_fips.csv", index_col=0)
-    confirmed_daily_incidence_cases_prop_fips = pd.read_csv(
-        "data/covid_usafacts/clean/confirmed_daily_incidence_cases_prop_fips.csv", index_col=0)
-    cumulative_deaths_prop_fips = pd.read_csv("data/covid_usafacts/clean/cumulative_deaths_prop_fips.csv", index_col=0)
-    daily_incidence_deaths_prop_fips = pd.read_csv("data/covid_usafacts/clean/daily_incidence_deaths_prop_fips.csv",
-                                                   index_col=0)
+def read_and_filter_df(df_name, cumulative=False):
+    # Read in data from local csv file
+    df = pd.read_csv(f"data/covidcast/clean/{df_name}.csv", index_col=0)
 
     # Remove rows with values < 0.0 (not possible)
-    confirmed_cumulative_cases_prop_fips = confirmed_cumulative_cases_prop_fips[
-        confirmed_cumulative_cases_prop_fips["value"] >= 0.0]
-    confirmed_daily_incidence_cases_prop_fips = confirmed_daily_incidence_cases_prop_fips[
-        confirmed_daily_incidence_cases_prop_fips["value"] >= 0.0]
-    cumulative_deaths_prop_fips = cumulative_deaths_prop_fips[cumulative_deaths_prop_fips["value"] >= 0.0]
-    daily_incidence_deaths_prop_fips = daily_incidence_deaths_prop_fips[
-        daily_incidence_deaths_prop_fips["value"] >= 0.0]
+    df = df[df['value'] >= 0.0]
 
-    # Convert all time_value columns into datetime
-    confirmed_cumulative_cases_prop_fips["time_value"] = pd.to_datetime(
-        confirmed_cumulative_cases_prop_fips["time_value"])
-    confirmed_daily_incidence_cases_prop_fips["time_value"] = pd.to_datetime(
-        confirmed_daily_incidence_cases_prop_fips["time_value"])
-    cumulative_deaths_prop_fips["time_value"] = pd.to_datetime(cumulative_deaths_prop_fips["time_value"])
-    daily_incidence_deaths_prop_fips["time_value"] = pd.to_datetime(daily_incidence_deaths_prop_fips["time_value"])
+    # Convert time_value column into datetime type
+    df['time_value'] = pd.to_datetime(df['time_value'])
 
     # Only fetch most recent cumulative data
-    confirmed_cumulative_cases_prop_fips = confirmed_cumulative_cases_prop_fips.sort_values("time_value")
-    confirmed_cumulative_cases_prop_fips = confirmed_cumulative_cases_prop_fips[
-        ~confirmed_cumulative_cases_prop_fips.duplicated("FIPS", keep='last')]
-    cumulative_deaths_prop_fips = cumulative_deaths_prop_fips.sort_values("time_value")
-    cumulative_deaths_prop_fips = cumulative_deaths_prop_fips[
-        ~cumulative_deaths_prop_fips.duplicated("FIPS", keep='last')]
+    if cumulative:
+        df = df.sort_values('time_value')
+        df = df[~df.duplicated('FIPS', keep='last')]
 
-    covid_data = {
-        'Cumulative Cases': confirmed_cumulative_cases_prop_fips,
-        'Daily New Cases': confirmed_daily_incidence_cases_prop_fips,
-        'Cumulative Deaths': cumulative_deaths_prop_fips,
-        'Daily Deaths': daily_incidence_deaths_prop_fips
+    return df
+
+
+@st.cache(allow_output_mutation=True)
+def load_covid_data():
+    covid_data = {}
+    covid_df_names = {
+        'Cumulative Cases per 100K people': "confirmed_cumulative_cases_prop_fips",
+        'Daily New Cases per 100K people': "confirmed_daily_incidence_cases_prop_fips",
+        "Cumulative Deaths per 100K people": "cumulative_deaths_prop_fips",
+        "Daily Deaths per 100K people": "daily_incidence_deaths_prop_fips",
+        "Daily % Covid-Related Doctor Visits": "perc_covid_doctor_visits_fips",
+        "% People Wearing Masks in Public in Past 5 Days": "perc_people_wearing_masks_fips",
+        "% People Tested for Covid in Past 14 Days": "perc_people_tested_fips",
+        "% Positive Covid Tests in Past 14 Days": "perc_positive_tests_fips",
+        "% People not Tested who Wanted Tests": "perc_wanted_test_fips"
     }
-
+    for covid_feature_name, covid_df_name in covid_df_names.items():
+        cumulative = "cumulative" in covid_feature_name.lower()
+        covid_data[covid_feature_name] = read_and_filter_df(covid_df_name, cumulative)
     return covid_data
+
 
 
 @st.cache(allow_output_mutation=True)
@@ -136,15 +129,20 @@ def get_covid_date_ranges(covid_data):
 
 
 def get_state_map_base(counties, selected_state_fips, highlighter, multiselector):
-    return alt.Chart(data=counties) \
-        .mark_geoshape(stroke='black', strokeWidth=1) \
-        .transform_calculate(state_id="(datum.id/1000)|0", FIPS="datum.id") \
-        .transform_filter(alt.datum.state_id == selected_state_fips) \
-        .properties(width=400, height=400) \
-        .add_selection(highlighter, multiselector) \
+    base = alt.Chart(data=counties)\
+        .mark_geoshape(stroke='black', strokeWidth=1)\
+        .transform_calculate(state_id="(datum.id/1000)|0", FIPS="datum.id")\
+        .transform_filter(alt.datum.state_id == selected_state_fips)\
+        .properties(width=400, height=400)\
+        .add_selection(highlighter, multiselector)\
         .encode(stroke=alt.condition(highlighter | multiselector, alt.value('purple'), alt.value('black')),
-                strokeWidth=alt.condition(highlighter | multiselector, alt.StrokeWidthValue(2.5),
-                                          alt.StrokeWidthValue(1.0)))
+                strokeWidth=alt.condition(highlighter | multiselector, alt.StrokeWidthValue(2.2), alt.StrokeWidthValue(1.0)))
+
+    # Use albersUsa map for Alaska to fix zoom issue
+    if selected_state_fips == 2:
+        base = base.project(type='albersUsa')
+
+    return base
 
 
 def get_specific_state_map(state_map_base, selected_feature, selected_feature_label, lookup_df, lookup_fields):
@@ -165,7 +163,7 @@ def draw_state_counties():
     # Select US state to view
     state_fips_dict = load_state_fips()
     states = list(state_fips_dict.keys())
-    selected_state = st.sidebar.selectbox('US State', options=states, index=states.index("New York"))
+    selected_state = st.sidebar.selectbox('US State', options=states, index=states.index("Pennsylvania"))
     selected_state_fips = state_fips_dict.get(selected_state)
 
     col1, col2 = st.beta_columns(2)
@@ -186,9 +184,8 @@ def draw_state_counties():
     selected_usda_feature = col1.selectbox('USDA Feature', options=usda_features, index=0)
 
     # Create state map based on USDA feature
-    select_all_btn = st.checkbox('Select all counties by default', value=True)
-    st.info(
-        'Hold Shift + click counties to only see their data on the chart below. Double-click map to reset selection.')
+    select_all_btn = st.checkbox('Select all counties by default to display on plot', value=False)
+    st.info('Hold Shift + click counties to only see their data on the chart below. Double-click map to reset selection.')
     empty = "all" if select_all_btn else "none"
     county_highlight = alt.selection_single(on='mouseover', empty=empty, fields=["FIPS"])
     county_multiselect = alt.selection_multi(empty=empty, fields=["FIPS"])
@@ -207,13 +204,11 @@ def draw_state_counties():
     covid_date_ranges = get_covid_date_ranges(covid_data)
 
     # Select covid feature
-    selected_covid_feature = col2.selectbox('COVID Feature per 100,000 population', options=list(covid_data.keys()),
-                                            index=0)
+    selected_covid_feature = col2.selectbox('COVID Feature', options=list(covid_data.keys()), index=0)
     covid_df = covid_data.get(selected_covid_feature)
-    covid_df = covid_df[
-        covid_df["FIPS"] // 1000 == selected_state_fips]  # filter for only counties in the selected state
+    covid_df = covid_df[covid_df["FIPS"] // 1000 == selected_state_fips]  # filter for only counties in the selected state
 
-    if 'Daily' in selected_covid_feature:
+    if 'Cumulative' not in selected_covid_feature:
 
         # Select date range
         min_date, max_date = covid_date_ranges.get(selected_covid_feature)
@@ -245,7 +240,7 @@ def draw_state_counties():
                                                  selected_feature_label=selected_agg_function,
                                                  lookup_df=covid_df, lookup_fields=['time_value', 'issue', 'Area Name'])
         covid_state_map = covid_state_map.properties(
-            title="%s per 100,000 population" % selected_covid_feature
+            title=selected_covid_feature
         )
 
         x_min = covid_df_pre_group['time_value'].min()
@@ -261,20 +256,19 @@ def draw_state_counties():
                             axis=alt.Axis(title="%s" % selected_covid_feature),
                             scale=alt.Scale(domain=[y_min, y_max])),
                     color=alt.Color("Area Name", legend=None),
-                    tooltip=[alt.Tooltip('Area Name:N', title="County")]) \
-            .properties(title="Time series analysis for covid cases") \
+                    tooltip=[alt.Tooltip('Area Name:N', title="County")])\
+            .properties(title="Time Series Analysis for %s" % selected_covid_feature)\
             .add_selection(county_multiselect) \
             .transform_filter(county_multiselect)
 
     else:
-        col2.selectbox('Cumulative as of',
-                       options=[covid_date_ranges.get(selected_covid_feature)[1].strftime("%B %d, %Y")])
+        col2.selectbox('Cumulative as of', options=[covid_date_ranges.get(selected_covid_feature)[1].strftime("%B %d, %Y")])
         covid_state_map = get_specific_state_map(state_map_base,
                                                  selected_feature='value',
                                                  selected_feature_label='Value',
                                                  lookup_df=covid_df, lookup_fields=['time_value', 'issue', 'Area Name'])
         covid_state_map = covid_state_map.properties(
-            title="%s per 100,000 population" % selected_covid_feature
+            title=selected_covid_feature
         )
 
         # find correlation between the feature and the COVID stats
@@ -288,17 +282,17 @@ def draw_state_counties():
 
         covid_details_chart = alt.Chart(full_df).mark_point() \
             .encode(x=alt.X("value:Q",
-                            axis=alt.Axis(title=selected_covid_feature + " per 100,000"),
+                            axis=alt.Axis(title=selected_covid_feature),
                             scale=alt.Scale(domain=[x_min, x_max])),
                     y=alt.Y(selected_usda_feature + ":Q",
                             scale=alt.Scale(domain=[y_min, y_max])),
-                    tooltip=[alt.Tooltip("Area Name_x:N", title="County")]) \
-            .properties(title="Correlation between %s per 100,000 and %s: %.4f" % (
-            selected_covid_feature, selected_usda_feature, correlation[0, 1]))
+                    tooltip=[alt.Tooltip("Area Name_x:N", title="County")])\
+            .properties(title="Correlation between %s and %s: %.4f" % (
+                            selected_covid_feature, selected_usda_feature, correlation[0, 1]))
 
         covid_details_chart = covid_details_chart + \
-                              covid_details_chart \
-                                  .transform_regression('value', selected_usda_feature, method='linear') \
+                              covid_details_chart\
+                                  .transform_regression('value', selected_usda_feature, method='linear')\
                                   .mark_line(color="#000000")
 
         covid_details_chart = covid_details_chart \
