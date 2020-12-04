@@ -66,6 +66,12 @@ def load_state_fips():
 
 
 @st.cache(allow_output_mutation=True)
+def load_county_fips():
+    county_fips = pd.read_csv("data/fips/clean/county_fips_2019.csv", index_col=0)
+    return county_fips[["State FIPS", "FIPS", "Area Name"]]
+
+
+@st.cache(allow_output_mutation=True)
 def load_usda_data():
     poverty = pd.read_csv("data/usda_county_datasets/clean/poverty_2018.csv", index_col=0)
     unemployment_median_hhi = pd.read_csv("data/usda_county_datasets/clean/unemployment_median_hhi_2018.csv",
@@ -166,6 +172,7 @@ def draw_state_counties():
 
     # Select US state to view
     state_fips_dict = load_state_fips()
+    county_fips_df = load_county_fips()  # {State FIPS, FIPS, Area Name}
     states = list(state_fips_dict.keys())
     selected_state = st.sidebar.selectbox('US State', options=states, index=states.index("Pennsylvania"))
     selected_state_fips = state_fips_dict.get(selected_state)
@@ -309,7 +316,9 @@ def draw_state_counties():
         .transform_calculate(state_id="(datum.id/1000)|0", FIPS="datum.id")\
         .transform_filter((alt.datum.state_id == selected_state_fips) & (alt.datum.id % 1000 != 0))\
         .properties(width=400, height=400)\
-        .encode(tooltip=[alt.Tooltip('id:N', title='FIPS')])
+        .encode(tooltip=[alt.Tooltip('id:N', title='FIPS'),
+                         alt.Tooltip('Area Name:N', title='Location')])\
+        .transform_lookup(lookup='id', from_=alt.LookupData(county_fips_df, 'FIPS', ['Area Name']))
 
     covid_state_map = add_selection(alt.layer(map_background, covid_state_map), county_highlight, county_multiselect)
     state_maps = alt.hconcat(usda_state_map, covid_state_map).resolve_scale(color='independent')
