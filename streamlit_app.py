@@ -219,7 +219,7 @@ def draw_state_counties():
 
         selected_min_date = col2.date_input("From Date", value=max_date - timedelta(days=7), min_value=min_date,
                                             max_value=max_date, key="min_date")
-        selected_max_date = col2.date_input("To Date", value=max_date, min_value=min_date, max_value=max_date,
+        selected_max_date = col2.date_input("To Date", value=max_date, min_value=selected_min_date, max_value=max_date,
                                             key="max_date")
         if selected_min_date > selected_max_date:
             st.error("ERROR: 'From Date' must be earlier or equal to 'To Date'")
