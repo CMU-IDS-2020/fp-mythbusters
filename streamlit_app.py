@@ -85,6 +85,12 @@ def load_state_fips():
 
 
 @st.cache(allow_output_mutation=True)
+def load_county_fips():
+    county_fips = pd.read_csv("data/fips/clean/county_fips_2019.csv", index_col=0)
+    return county_fips[["State FIPS", "FIPS", "Area Name"]]
+
+
+@st.cache(allow_output_mutation=True)
 def load_usda_data():
     poverty = pd.read_csv("data/usda_county_datasets/clean/poverty_2018.csv", index_col=0)
     unemployment_median_hhi = pd.read_csv("data/usda_county_datasets/clean/unemployment_median_hhi_2018.csv",
@@ -147,21 +153,25 @@ def get_covid_date_ranges(covid_data):
     return covid_date_ranges
 
 
-def get_state_map_base(counties, selected_state_fips, highlighter, multiselector):
+def get_state_map_base(counties, selected_state_fips):
     base = alt.Chart(data=counties)\
         .mark_geoshape(stroke='black', strokeWidth=1)\
         .transform_calculate(state_id="(datum.id/1000)|0", FIPS="datum.id")\
         .transform_filter(alt.datum.state_id == selected_state_fips)\
-        .properties(width=400, height=400)\
-        .add_selection(highlighter, multiselector)\
-        .encode(stroke=alt.condition(highlighter | multiselector, alt.value('purple'), alt.value('black')),
-                strokeWidth=alt.condition(highlighter | multiselector, alt.StrokeWidthValue(2.2), alt.StrokeWidthValue(1.0)))
+        .properties(width=400, height=400)
 
     # Use albersUsa map for Alaska to fix zoom issue
     if selected_state_fips == 2:
         base = base.project(type='albersUsa')
 
     return base
+
+
+def add_selection(map, highlighter, multiselector):
+    return map.add_selection(highlighter, multiselector) \
+        .encode(stroke=alt.condition(highlighter | multiselector, alt.value('purple'), alt.value('black')),
+                strokeWidth=alt.condition(highlighter | multiselector, alt.StrokeWidthValue(2.2),
+                                          alt.StrokeWidthValue(1.0)))
 
 
 def get_specific_state_map(state_map_base, selected_feature, selected_feature_label, lookup_df, lookup_fields):
@@ -206,6 +216,7 @@ def draw_state_counties():
 
     # Select US state to view
     state_fips_dict = load_state_fips()
+    county_fips_df = load_county_fips()  # {State FIPS, FIPS, Area Name}
     states = list(state_fips_dict.keys())
     selected_state = st.sidebar.selectbox('US State', options=states, index=states.index("Pennsylvania"))
     selected_state_fips = state_fips_dict.get(selected_state)
@@ -234,14 +245,14 @@ def draw_state_counties():
     empty = "all" if select_all_btn else "none"
     county_highlight = alt.selection_single(on='mouseover', empty=empty, fields=["FIPS"])
     county_multiselect = alt.selection_multi(empty=empty, fields=["FIPS"])
-    state_map_base = get_state_map_base(counties, selected_state_fips, county_highlight, county_multiselect)
+    state_map_base = get_state_map_base(counties, selected_state_fips)
     usda_state_map = get_specific_state_map(state_map_base,
                                             selected_feature=selected_usda_feature,
                                             selected_feature_label='Value',
                                             lookup_df=usda_df, lookup_fields=['Area Name'])
-    usda_state_map = usda_state_map.properties(
-        title="%s: %s" % (selected_usda_category, selected_usda_feature)
-    )
+
+    usda_state_map = add_selection(usda_state_map, county_highlight, county_multiselect)\
+        .properties(title="%s: %s" % (selected_usda_category, selected_usda_feature))
 
     # ----- Create COVID feature state map -----
     # Load COVID data
@@ -328,6 +339,16 @@ def draw_state_counties():
             .transform_filter(county_multiselect)
 
     # Draw maps side-by-side
+    map_background = alt.Chart(data=counties)\
+        .mark_geoshape(stroke='black', strokeWidth=1, fill='lightgray')\
+        .transform_calculate(state_id="(datum.id/1000)|0", FIPS="datum.id")\
+        .transform_filter((alt.datum.state_id == selected_state_fips) & (alt.datum.id % 1000 != 0))\
+        .properties(width=400, height=400)\
+        .encode(tooltip=[alt.Tooltip('id:N', title='FIPS'),
+                         alt.Tooltip('Area Name:N', title='Location')])\
+        .transform_lookup(lookup='id', from_=alt.LookupData(county_fips_df, 'FIPS', ['Area Name']))
+
+    covid_state_map = add_selection(alt.layer(map_background, covid_state_map), county_highlight, county_multiselect)
     state_maps = alt.hconcat(usda_state_map, covid_state_map).resolve_scale(color='independent')
 
     # Draw covid details chart below maps
