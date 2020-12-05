@@ -145,7 +145,13 @@ def draw_tweet_data(stopwords, representation, container, state=None):
     if representation == "Word Cloud":
         cached_pic = get_wordcloud_from_file(state)
         if cached_pic:
-            container.image(cached_pic, width=600)
+            # Here we scale the width to obtain a constant height
+            width, height = cached_pic.size
+            desired_height = 600
+            mult = desired_height/height
+            cached_pic = cached_pic.resize((int(width*mult), desired_height))
+
+            container.image(cached_pic)
         else:
             cleaned_tweets = get_cleaned_tweet_words(state, stopwords)
             wordcloud = get_wordcloud(cleaned_tweets, state)
