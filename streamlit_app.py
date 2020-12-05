@@ -310,19 +310,25 @@ def draw_us_counties(container):
         .mark_geoshape(stroke='black', strokeWidth=1) \
         .transform_calculate(state_id="(datum.id/1000)|0", FIPS="datum.id") \
         .properties(width=850, height=500) \
-        .project(type="albersUsa") \
-        .configure_legend(orient='bottom')
+        .project(type="albersUsa")
         # .add_selection(country_highlight, country_multiselect) \
+
+    usa_map_background = alt.Chart(data=counties)\
+        .mark_geoshape(stroke='black', strokeWidth=1, fill='lightgray')\
+        .transform_filter(alt.datum.id % 1000 != 0)\
+        .properties(width=850, height=500)\
+        .project(type="albersUsa")
 
     usda_usa_map = get_specific_state_map(country_base,
                                           selected_feature=control_panel.get('selected_usda_feature'),
                                           selected_feature_label='Value',
                                           lookup_df=control_panel.get('usda_df'),
                                           lookup_fields=['Area Name'])
-    usda_usa_map = usda_usa_map.properties(title="%s: %s" % (control_panel.get('selected_usda_category'),
-                                                             control_panel.get('selected_usda_feature')))
+    usda_usa_map = usda_usa_map\
+        .properties(title="%s: %s" % (control_panel.get('selected_usda_category'), control_panel.get('selected_usda_feature')))
 
-    container.write(usda_usa_map)
+    container.write(alt.layer(usa_map_background, usda_usa_map).configure_legend(orient='bottom'))
+
     if 'Cumulative' not in control_panel.get('selected_covid_feature'):
 
         covid_usa_map = get_specific_state_map(country_base,
@@ -332,7 +338,7 @@ def draw_us_counties(container):
                                                lookup_fields=['time_value', 'issue', 'Area Name'])
 
         covid_usa_map = covid_usa_map.properties(title=control_panel.get('selected_covid_feature'))
-        container.write(covid_usa_map)
+        container.write(alt.layer(usa_map_background, covid_usa_map).configure_legend(orient='bottom'))
 
     else:
         covid_usa_map = get_specific_state_map(country_base,
@@ -347,7 +353,7 @@ def draw_us_counties(container):
                                             control_panel.get('selected_covid_feature'))
         usa_cor_plot = usa_cor_plot.properties(width=800, height=500)
 
-        container.write(covid_usa_map)
+        container.write(alt.layer(usa_map_background, covid_usa_map).configure_legend(orient='bottom'))
         container.write(usa_cor_plot)
 
 
