@@ -324,26 +324,30 @@ def draw_us_counties(container):
 
     container.write(usda_usa_map)
     if 'Cumulative' not in control_panel.get('selected_covid_feature'):
-        pass  # TODO: for now just not doing a plot here
-        """country_map = get_specific_state_map(country_base,
-                                selected_feature=selected_agg_function,
-                                selected_feature_label=selected_agg_function,
-                                lookup_df=covid_df_usa, lookup_fields=['time_value', 'issue', 'Area Name'])"""
+
+        covid_usa_map = get_specific_state_map(country_base,
+                                               selected_feature=control_panel.get('selected_covid_agg_function'),
+                                               selected_feature_label=control_panel.get('selected_covid_agg_function'),
+                                               lookup_df=control_panel.get('covid_df_agg'),
+                                               lookup_fields=['time_value', 'issue', 'Area Name'])
+
+        covid_usa_map = covid_usa_map.properties(title=control_panel.get('selected_covid_feature'))
+        container.write(covid_usa_map)
 
     else:
-        country_map = get_specific_state_map(country_base,
-                                             selected_feature='value',
-                                             selected_feature_label='Value',
-                                             lookup_df=control_panel.get('covid_df'),
-                                             lookup_fields=['time_value', 'issue', 'Area Name'])
-        country_map = country_map.properties(title=control_panel.get('selected_covid_feature'))
+        covid_usa_map = get_specific_state_map(country_base,
+                                               selected_feature='value',
+                                               selected_feature_label='Value',
+                                               lookup_df=control_panel.get('covid_df'),
+                                               lookup_fields=['time_value', 'issue', 'Area Name'])
+        covid_usa_map = covid_usa_map.properties(title=control_panel.get('selected_covid_feature'))
 
         full_df_usa = control_panel.get('covid_df').merge(control_panel.get('usda_df'), on="FIPS")
         usa_cor_plot = get_covid_corr_chart(full_df_usa, control_panel.get('selected_usda_feature'),
                                             control_panel.get('selected_covid_feature'))
         usa_cor_plot = usa_cor_plot.properties(width=800, height=500)
 
-        container.write(country_map)
+        container.write(covid_usa_map)
         container.write(usa_cor_plot)
 
 
