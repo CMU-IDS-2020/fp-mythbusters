@@ -312,14 +312,13 @@ def draw_state_counties():
                     y=alt.Y('value:Q',
                             axis=alt.Axis(title="%s" % selected_covid_feature),
                             scale=alt.Scale(domain=[y_min, y_max])),
-                    color=alt.Color("Area Name", legend=None),
+                    color=alt.Color("Area Name"),#, legend=None),
                     tooltip=[alt.Tooltip('Area Name:N', title="County")])\
             .properties(title="Time Series Analysis for %s" % selected_covid_feature)\
             .add_selection(county_multiselect) \
             .transform_filter(county_multiselect)
 
     else:
-        print(covid_date_ranges.get(selected_covid_feature))
         col2.selectbox('Cumulative as of', options=[covid_date_ranges.get(selected_covid_feature)[1].strftime("%B %d, %Y")]) #TODO think this is incorrect
         covid_state_map = get_specific_state_map(state_map_base,
                                                  selected_feature='value',
@@ -353,22 +352,23 @@ def draw_state_counties():
 
     # Draw covid details chart below maps
     covid_details_chart = covid_details_chart \
-        .properties(width=800, height=500)
+        .properties(width=800, height=400)
 
     st.write(alt.vconcat(state_maps, covid_details_chart).configure_legend(orient='bottom'))
 
     ## Code for full country map
 
     country_counties = alt.topo_feature(data.us_10m.url, 'counties')
-    country_highlight = alt.selection_single(on='mouseover', empty=empty, fields=["FIPS"])
-    country_multiselect = alt.selection_multi(empty=empty, fields=["FIPS"])
+    # commented lines are for being able to select counties on the map, didn't finish it yet
+    #country_highlight = alt.selection_single(on='mouseover', empty=empty, fields=["FIPS"])
+    #country_multiselect = alt.selection_multi(empty=empty, fields=["FIPS"])
     country_base = alt.Chart(data=country_counties) \
         .mark_geoshape(stroke='black', strokeWidth=1) \
         .transform_calculate(state_id="(datum.id/1000)|0", FIPS="datum.id") \
         .properties(width=850, height=500) \
         .project(type="albersUsa") \
-        .add_selection(country_highlight, country_multiselect) \
         .configure_legend(orient='bottom')
+        #.add_selection(country_highlight, country_multiselect) \
 
     # USDA feature
     usda_usa_map = get_specific_state_map(country_base,
@@ -400,8 +400,8 @@ def draw_state_counties():
         country_map = country_map.properties(
         title=selected_covid_feature
     )
-    st.write(country_map)
-    st.write(usa_cor_plot)
+        st.write(country_map)
+        st.write(usa_cor_plot)
 
     return selected_state
 
