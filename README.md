@@ -10,7 +10,7 @@
 
 ## Work distribution
 
-Update towards the end of the project.
+* **Joseph Koshakow**: Joe was responsible for all things tweet related. Joe wrote and executed the scripts to fetch and organize the tweet contents from the Twitter API. Additionally Joe created the tweet word clouds and the tweet bar charts as well as the functionality to switch between the two.
 
 ## Deliverables
 
