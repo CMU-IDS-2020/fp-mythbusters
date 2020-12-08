@@ -12,6 +12,8 @@
 
 * **Joseph Koshakow**: Joe was responsible for all things tweet related. Joe wrote and executed the scripts to fetch and organize the tweet contents from the Twitter API. Additionally Joe created the tweet word clouds and the tweet bar charts as well as the functionality to switch between the two.
 
+* **Vivian Lee**: Vivian was responsible for obtaining the socioeconomic indicator, FIPS, and covid data and for creating the interactive side-by-side state maps. Vivian wrote scripts to fetch the covid data from Carnegie Mellon’s Epidata API and merge it with the socioeconomic and FIPs data, retrieved from federal agency sites like the US Census Bureau and the US Department of Agriculture. These scripts were executed in a Jupyter notebook; the notebook and csv files are saved in this repository to support the reproducibility of this work. Vivian used the Altair visualization library to create the side-by-side county-level state maps and add interactive features to them. These features include Streamlit widgets to control which features are used for color-coding the counties, tooltips to display specific county information, linked highlighting of counties between the maps, and a multi-select feature that allows users to click on multiple counties on the covid map to control which counties' data are displayed on the correlation/time-series plot below the map.
+
 ## Deliverables
 
 ### Proposal
