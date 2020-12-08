@@ -241,7 +241,7 @@ def draw_control_panel(col1, col2, container, selected_state_fips=None):
 
     # Select USDA socioeconomic indicator
     selected_usda_category = col1.selectbox('Socioeconomic Indicator', options=list(USDA_DATA.keys()),
-                                            index=0 if not NARRATIVE else list(USDA_DATA.keys()).index(SOCIOECONOMIC_INDICATOR),
+                                            index=0 if not NARRATIVE or SOCIOECONOMIC_INDICATOR is None else list(USDA_DATA.keys()).index(SOCIOECONOMIC_INDICATOR),
                                             key=widget_key("usda_category", selected_state_fips))
     usda_df = USDA_DATA.get(selected_usda_category)
     usda_df = usda_df[usda_df["FIPS"] % 1000 != 0]  # remove non-county rows
@@ -249,12 +249,12 @@ def draw_control_panel(col1, col2, container, selected_state_fips=None):
     # Select USDA feature to color choropleth map
     usda_features = [col for col in usda_df.columns if col not in ['FIPS', 'State Abrv', 'Area Name']]
     selected_usda_feature = col1.selectbox('Measure', options=usda_features,
-                                           index=0 if not NARRATIVE else usda_features.index(SOCIOECONOMIC_FEATURE),
+                                           index=0 if not NARRATIVE or SOCIOECONOMIC_FEATURE not in usda_features else usda_features.index(SOCIOECONOMIC_FEATURE),
                                            key=widget_key("usda_feature", selected_state_fips))
 
     # Select Covid-19 feature to color choropleth map
     selected_covid_feature = col2.selectbox('Covid-19 Feature', options=list(COVID_DATA.keys()),
-                                            index=0 if not NARRATIVE else list(COVID_DATA.keys()).index(COVID_FEATURE),
+                                            index=0 if not NARRATIVE or COVID_FEATURE is None else list(COVID_DATA.keys()).index(COVID_FEATURE),
                                             key=widget_key("covid_feature", selected_state_fips))
     covid_df = COVID_DATA.get(selected_covid_feature)
 
@@ -482,12 +482,12 @@ def adjust_control_panel(state=None, socioeconomic_indicator=None, socioeconomic
         COVID_FEATURE, COVID_START_DATE, COVID_END_DATE, COVID_AGG_FUNCTION
 
     STATE_TO_VIEW = state if state is not None else STATE_TO_VIEW
-    SOCIOECONOMIC_INDICATOR = socioeconomic_indicator if socioeconomic_indicator is not None else SOCIOECONOMIC_INDICATOR
-    SOCIOECONOMIC_FEATURE = socioeconomic_feature if socioeconomic_feature is not None else SOCIOECONOMIC_FEATURE
-    COVID_FEATURE = covid_feature if covid_feature is not None else COVID_FEATURE
-    COVID_START_DATE = covid_start if covid_start is not None else COVID_START_DATE
-    COVID_END_DATE = covid_end if covid_end is not None else COVID_END_DATE
-    COVID_AGG_FUNCTION = covid_agg if covid_agg is not None else COVID_AGG_FUNCTION
+    SOCIOECONOMIC_INDICATOR = socioeconomic_indicator
+    SOCIOECONOMIC_FEATURE = socioeconomic_feature
+    COVID_FEATURE = covid_feature
+    COVID_START_DATE = covid_start
+    COVID_END_DATE = covid_end
+    COVID_AGG_FUNCTION = covid_agg
 
 
 def write_narrative_2(container):
@@ -517,7 +517,7 @@ def write_narrative_1(container):
         adjust_control_panel(state="Florida", socioeconomic_indicator="Education", socioeconomic_feature="% Adults Incomplete High School (2018)",
                              covid_feature="Cumulative Cases per 100K people")
     elif INTERACTIVE_CONTROL == 'Narrative Median HHI':
-        adjust_control_panel(state="Florida", socioeconomic_indicator="Education", socioeconomic_feature="% Adults Incomplete High School (2018)",
+        adjust_control_panel(state="Florida", socioeconomic_indicator="Unemployment and Median HHI", socioeconomic_feature="Median Household Income (2018)",
                              covid_feature="Cumulative Cases per 100K people")
 
     container.write("A picture is worth a thousand words, but can a thousand words create a picture?  With Covid-19 spreading uncontrolled throughout the United States, we are looking for any answers that can help "
