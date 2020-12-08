@@ -244,5 +244,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-    # for state, code in STATE_TO_CODE_MAP.items():
-    #     os.makedirs(f"{GEO_OEMBEDS}/{code}")
