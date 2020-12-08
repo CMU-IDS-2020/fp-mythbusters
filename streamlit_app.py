@@ -102,6 +102,17 @@ USDA_DATA = load_usda_data()
 COVID_DATA = load_covid_data()
 COVID_DATE_RANGES = get_covid_date_ranges(COVID_DATA)
 
+INTERACTIVE_CONTROL = st.sidebar.radio("Data Exploration: ", ("Manual", "Narrative Population", "Narrative Education",
+                                                              "Narrative Median HHI"))
+NARRATIVE = False
+STATE_TO_VIEW = "Pennsylvania"
+SOCIOECONOMIC_INDICATOR = None
+SOCIOECONOMIC_FEATURE = None
+COVID_FEATURE = None
+COVID_START_DATE = None
+COVID_END_DATE = None
+COVID_AGG_FUNCTION = None
+
 
 @st.cache(allow_output_mutation=True)
 def get_cleaned_tweet_words(state=None, stopwords=None):
@@ -228,18 +239,21 @@ def widget_key(widget_name, selected_state_fips=None):
 def draw_control_panel(col1, col2, container, selected_state_fips=None):
 
     # Select USDA socioeconomic indicator
-    selected_usda_category = col1.selectbox('Socioeconomic Indicator', options=list(USDA_DATA.keys()), index=0,
+    selected_usda_category = col1.selectbox('Socioeconomic Indicator', options=list(USDA_DATA.keys()),
+                                            index=0 if not NARRATIVE else list(USDA_DATA.keys()).index(SOCIOECONOMIC_INDICATOR),
                                             key=widget_key("usda_category", selected_state_fips))
     usda_df = USDA_DATA.get(selected_usda_category)
     usda_df = usda_df[usda_df["FIPS"] % 1000 != 0]  # remove non-county rows
 
     # Select USDA feature to color choropleth map
     usda_features = [col for col in usda_df.columns if col not in ['FIPS', 'State Abrv', 'Area Name']]
-    selected_usda_feature = col1.selectbox('Measure', options=usda_features, index=0,
+    selected_usda_feature = col1.selectbox('Measure', options=usda_features,
+                                           index=0 if not NARRATIVE else usda_features.index(SOCIOECONOMIC_FEATURE),
                                            key=widget_key("usda_feature", selected_state_fips))
 
     # Select Covid-19 feature to color choropleth map
-    selected_covid_feature = col2.selectbox('Covid-19 Feature', options=list(COVID_DATA.keys()), index=0,
+    selected_covid_feature = col2.selectbox('Covid-19 Feature', options=list(COVID_DATA.keys()),
+                                            index=0 if not NARRATIVE else list(COVID_DATA.keys()).index(COVID_FEATURE),
                                             key=widget_key("covid_feature", selected_state_fips))
     covid_df = COVID_DATA.get(selected_covid_feature)
 
@@ -460,6 +474,58 @@ def draw_embedded_tweets(state, container):
             #     container.markdown(tweet_oembeds[i], unsafe_allow_html=True)
 
 
+def adjust_control_panel(state=None, socioeconomic_indicator=None, socioeconomic_feature=None, covid_feature=None,
+                         covid_start=None, covid_end=None, covid_agg=None):
+
+    global STATE_TO_VIEW, SOCIOECONOMIC_INDICATOR, SOCIOECONOMIC_FEATURE, \
+        COVID_FEATURE, COVID_START_DATE, COVID_END_DATE, COVID_AGG_FUNCTION
+
+    STATE_TO_VIEW = state
+    SOCIOECONOMIC_INDICATOR = socioeconomic_indicator
+    SOCIOECONOMIC_FEATURE = socioeconomic_feature
+    COVID_FEATURE = covid_feature
+    COVID_START_DATE = covid_start
+    COVID_END_DATE = covid_end
+    COVID_AGG_FUNCTION = covid_agg
+
+
+def write_narrative_1(container):
+
+    global NARRATIVE
+    NARRATIVE = INTERACTIVE_CONTROL != "Manual"
+
+    if INTERACTIVE_CONTROL == 'Narrative Population':
+        adjust_control_panel(state="Florida", socioeconomic_indicator="Population", socioeconomic_feature="Population Estimate (2018)",
+                             covid_feature="Cumulative Cases per 100K people")
+    elif INTERACTIVE_CONTROL == 'Narrative Education':
+        adjust_control_panel(state="Florida", socioeconomic_indicator="Education", socioeconomic_feature="% Adults Incomplete High School (2018)",
+                             covid_feature="Cumulative Cases per 100K people")
+    elif INTERACTIVE_CONTROL == '':
+        adjust_control_panel(state="Florida", socioeconomic_indicator="Education", socioeconomic_feature="% Adults Incomplete High School (2018)",
+                             covid_feature="Cumulative Cases per 100K people")
+
+    # Introduction
+    container.write("A picture is worth a thousand words, but can a thousand words create a picture?  With Covid-19 spreading uncontrolled throughout the United States, we are looking for any answers that can help "
+                    "predict who will be hit next, who will be hit hardest, and where we should allocate the most resources. While the country organizes Task Forces to help control the spread, we take a look at "
+                    "some less obvious factors that may help shine new light on virus outbreaks. In doing this we hope to prove or disprove some of the myths around the spread and impact of Covid-19.")
+
+    container.write("When the U.S. first began lockdowns in March many people and news sources, like this University of Chicago [news article](https://news.uchicago.edu/story/coronavirus-hitting-larger-cities-harder-how-should-they-respond) "
+                    "from March 31st, believed that only big cities would be impacted. Even scholarly articles predicted that densely populated centers would be at most risk.")
+
+    container.write("It stands to reason that any disease spread by people would be more prevalent in places with more people.  Let’s go to the data to see if this is actually true.  We will start in Florida since it is a very diverse state with both rural and populous urban counties. Select the **Narrative Population** radio button in the sidebar, then scroll down to the “Florida Indicators” tab. Oddly enough we see a negative linear relationship between population and cumulative cases per 100K people; in other words, the more populated a county is in Florida the less cumulative cases per 100K people it appears to have. Now this could be an outlier, so let’s compare this to the relationship on the U.S. Map when using the same indicators.  Scroll down to the “United States Indicators” tab below. Shockingly we see that Florida is not an outlier in this regard. In fact, we can see a very small negative linear relationship between these variables nationwide.  As demonstrated from this [news article]( https://theconversation.com/rural-america-is-more-vulnerable-to-covid-19-than-cities-are-and-its-starting-to-show-140532) published on June 18, it seems like we weren’t the first to uncover this phenomenon.")
+
+    container.write("As we are unlikely to get the Nobel prize since we weren’t the first to discover this correlation, let’s see if any of our other data can help explain it.  We can stick with Florida, but let’s switch to Education as our Socioeconomic indicator, and use perhaps the biggest indicator of “Poor education” we have available, which is Percentage of Adults who didn’t complete high School.  Before we look at the data, let’s see what the [US Bureau of Labor and Statistics]( https://www.bls.gov/opub/mlr/2020/beyond-bls/covid-19-educational-attainment-and-the-impact-on-american-workers.htm) (BLS) has to say about this correlation.")
+
+    container.write("It seems like the BLS beliefs that less educated populations are more at risk because of their inability to telework. Let’s see if the data supports this. Select the **Narrative Education** radio button in the sidebar. We see in Florida there is an extremely high correlation between Adults who don’t complete high school and Cumulative Cases of Covid-19 per 100k people.  This trend also exists when we look at the nationwide numbers.")
+
+    container.write("In another [article]( https://www.bls.gov/opub/mlr/2020/article/ability-to-work-from-home.htm), the BLS reports that people who live in densely populated areas are more likely to be able to telework. It would seem that we have now found a huge indicator of susceptibility to Covid-19: the ability to telework. Obviously, we are closing in on our Nobel Prize by now so let’s continue.")
+
+    container.write("We have seen that the type of work most common among inhabitants of a certain region can have a large impact on its number of Covid-19 cases. Now let’s turn to another socioeconomic indicator often correlated with different types of job levels: median household income and its impact on Covid-19 cases. Keeping with our methodology, let’s first see what the news has to say about this indicator’s influence. When we search “Median household income and Covid-19” on Google, we are presented with many articles with headlines that proclaim how Covid-19 has lowered median household incomes. ")
+
+    container.write("Turning back to our data, select the **Narrative Median HHI** radio button in the sidebar. We see the strongest correlation between Median Household Income (2018) and Cumulative Cases per 100K people of all the correlations so far. Lower median household income areas have higher numbers of covid cases. Again, this holds true in both Florida and nationwide. We have begun to see a real trend here.  The type of work people do has a major impact on both their income and ability to telework, which has a huge impact on their likelihood of catching Covid-19.")
+
+
+
 def main():
 
     # Source for adjusting container width in streamlit app
@@ -487,15 +553,19 @@ def main():
     # Page Title
     st.title("US Socioeconomic Indicators vs Covid-19")
 
+    # Write narrative
+    narrative_1_container = st.beta_expander("Narrative: Socioeconomic Analysis", expanded=NARRATIVE)
+    write_narrative_1(narrative_1_container)
+
     # Sidebar
     word_rep = st.sidebar.radio("Display tweets as: ", ("Word Cloud", "Bar Chart"))
-    selected_state = st.sidebar.selectbox('US State', options=STATES, index=STATES.index("Pennsylvania"))
+    selected_state = st.sidebar.selectbox('US State', options=STATES, index=STATES.index(STATE_TO_VIEW))
 
-    # Container Objects
-    state_tweets_container = st.beta_expander(f"{selected_state} Tweets", expanded=True)
+    # Container objects
+    state_tweets_container = st.beta_expander(f"{selected_state} Tweets", expanded=not NARRATIVE)
     state_indicators_container = st.beta_expander(f"{selected_state} Indicators", expanded=True)
     global_tweets_container = st.beta_expander("Global Tweets")
-    country_indicators_container = st.beta_expander("United States Indicators")
+    country_indicators_container = st.beta_expander("United States Indicators", expanded=NARRATIVE)
 
     # State Tweets
     state_code = STATE_TO_CODE_MAP[selected_state.strip()]
