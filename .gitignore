@@ -12,6 +12,9 @@ venv/
 
 # COVID Tweet IDs. There's a lot which make git pushing and pulling slow
 data/tweets/covid_tweet_ids/
+data/tweets/geo_covid_tweet_ids/
+# State pics, we don't need these because all the wordclouds are cached
+data/state_pics/
 
 # DS_Store files for subdirectories
 .DS_Store
