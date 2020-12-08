@@ -102,16 +102,17 @@ USDA_DATA = load_usda_data()
 COVID_DATA = load_covid_data()
 COVID_DATE_RANGES = get_covid_date_ranges(COVID_DATA)
 
-INTERACTIVE_CONTROL = st.sidebar.radio("Data Exploration: ", ("Manual", "Narrative Population", "Narrative Education",
-                                                              "Narrative Median HHI"))
+INTERACTIVE_CONTROL = st.sidebar.radio("Guided Exploration: ",
+                                       ("Manual", "Narrative Population", "Narrative Education", "Narrative Median HHI",
+                                        "Narrative Tweets"))
 NARRATIVE = False
 STATE_TO_VIEW = "Pennsylvania"
-SOCIOECONOMIC_INDICATOR = None
-SOCIOECONOMIC_FEATURE = None
-COVID_FEATURE = None
+SOCIOECONOMIC_INDICATOR = "Poverty"
+SOCIOECONOMIC_FEATURE = "% Total Population in Poverty (2018)"
+COVID_FEATURE = "Cumulative Cases per 100K people"
 COVID_START_DATE = None
 COVID_END_DATE = None
-COVID_AGG_FUNCTION = None
+COVID_AGG_FUNCTION = "Max"
 
 
 @st.cache(allow_output_mutation=True)
@@ -480,13 +481,28 @@ def adjust_control_panel(state=None, socioeconomic_indicator=None, socioeconomic
     global STATE_TO_VIEW, SOCIOECONOMIC_INDICATOR, SOCIOECONOMIC_FEATURE, \
         COVID_FEATURE, COVID_START_DATE, COVID_END_DATE, COVID_AGG_FUNCTION
 
-    STATE_TO_VIEW = state
-    SOCIOECONOMIC_INDICATOR = socioeconomic_indicator
-    SOCIOECONOMIC_FEATURE = socioeconomic_feature
-    COVID_FEATURE = covid_feature
-    COVID_START_DATE = covid_start
-    COVID_END_DATE = covid_end
-    COVID_AGG_FUNCTION = covid_agg
+    STATE_TO_VIEW = state if state is not None else STATE_TO_VIEW
+    SOCIOECONOMIC_INDICATOR = socioeconomic_indicator if socioeconomic_indicator is not None else SOCIOECONOMIC_INDICATOR
+    SOCIOECONOMIC_FEATURE = socioeconomic_feature if socioeconomic_feature is not None else SOCIOECONOMIC_FEATURE
+    COVID_FEATURE = covid_feature if covid_feature is not None else COVID_FEATURE
+    COVID_START_DATE = covid_start if covid_start is not None else COVID_START_DATE
+    COVID_END_DATE = covid_end if covid_end is not None else COVID_END_DATE
+    COVID_AGG_FUNCTION = covid_agg if covid_agg is not None else COVID_AGG_FUNCTION
+
+
+def write_narrative_2(container):
+    global NARRATIVE
+    NARRATIVE = INTERACTIVE_CONTROL != "Manual"
+
+    if INTERACTIVE_CONTROL == 'Narrative Tweets':
+        adjust_control_panel(state="Florida")
+
+    container.write("Next, we pivot our attention to how people are talking about Covid-19 on social media platforms. For this, we use Twitter and look for the most popular terms on Covid-19 related Twitter feeds. We have just seen through the data that employment type is a major factor in susceptibility to Covid-19.  Hopefully, we see people talking about this on Twitter.  ")
+    container.write("We continue our analysis of Florida and turn to its Twitter feed from the summer of 2020. For the ease of reading, we’ll look at the most frequent terms from tweets in bar chart form. Select the **Narrative Tweets** radio button on the sidebar. Unsurprisingly, the word “work” appears in the top 50 most frequent words used in tweets posted from Florida. However, it is at a relatively low place: 23rd out of 50. When we look at the most frequent words from our global set of tweets, “work” is 22nd out of the top 50. Surely something so important should be the topic of more conversations. And if not, what are people more focused on?")
+    container.write("One thing that stands out is that the words “trump” and “realdonaldtrump” (The President’s Twitter handle) appear in the top 5 words from Florida tweets. On a global scale, “trump” appears in the top 10 words used. This seems to be a cry for leadership to get us through a trying time.  And it makes sense that we would want to unite behind a strong leader during a crisis.  Among the Florida tweets, we also see popular terms like “stayhome”, “quarantine”, and “time”.  It seems people understand that this is a long process that we will need to stayhome and quarantine to get through.  One of the most telling things when going through all the states, and again when we look at the Global tweets from across the world is that the most popular term is “People”.  It is easy to get caught up in the politics of Covid-19, but it is good to know that, when we look at the tweets as a whole, we can see that people know that we the “People” are in this together. ")
+    container.write("We hope you found this narrative compelling, or at the very least interesting. We have only scratched the surface of some of the popular opinions that can be explored and insights that can be drawn from our app. ")
+    container.write("We encourage you to ask your own questions and interact with our app further to see what new conclusions can be drawn from exploring the data. Some ideas include: What impact did the heat and summer months have on the number of cases? And is there a correlation between education level and the decision to wear a mask while out in public? See what myths and common beliefs you can help support or debunk.")
+    container.write("Happy Busting!  \n - Mythbusters")
 
 
 def write_narrative_1(container):
@@ -500,11 +516,10 @@ def write_narrative_1(container):
     elif INTERACTIVE_CONTROL == 'Narrative Education':
         adjust_control_panel(state="Florida", socioeconomic_indicator="Education", socioeconomic_feature="% Adults Incomplete High School (2018)",
                              covid_feature="Cumulative Cases per 100K people")
-    elif INTERACTIVE_CONTROL == '':
+    elif INTERACTIVE_CONTROL == 'Narrative Median HHI':
         adjust_control_panel(state="Florida", socioeconomic_indicator="Education", socioeconomic_feature="% Adults Incomplete High School (2018)",
                              covid_feature="Cumulative Cases per 100K people")
 
-    # Introduction
     container.write("A picture is worth a thousand words, but can a thousand words create a picture?  With Covid-19 spreading uncontrolled throughout the United States, we are looking for any answers that can help "
                     "predict who will be hit next, who will be hit hardest, and where we should allocate the most resources. While the country organizes Task Forces to help control the spread, we take a look at "
                     "some less obvious factors that may help shine new light on virus outbreaks. In doing this we hope to prove or disprove some of the myths around the spread and impact of Covid-19.")
@@ -554,18 +569,22 @@ def main():
     st.title("US Socioeconomic Indicators vs Covid-19")
 
     # Write narrative
-    narrative_1_container = st.beta_expander("Narrative: Socioeconomic Analysis", expanded=NARRATIVE)
+    narrative_1_container = st.beta_expander("Narrative: Socioeconomic Analysis", expanded=INTERACTIVE_CONTROL not in ['Manual', 'Narrative Tweets'])
     write_narrative_1(narrative_1_container)
 
+    narrative_2_container = st.beta_expander("Narrative: Exploring Tweets", expanded=INTERACTIVE_CONTROL == 'Narrative Tweets')
+    write_narrative_2(narrative_2_container)
+
     # Sidebar
-    word_rep = st.sidebar.radio("Display tweets as: ", ("Word Cloud", "Bar Chart"))
+    word_rep = st.sidebar.radio("Display tweets as: ", ("Word Cloud", "Bar Chart"),
+                                index=1 if INTERACTIVE_CONTROL == 'Narrative Tweets' else 0)
     selected_state = st.sidebar.selectbox('US State', options=STATES, index=STATES.index(STATE_TO_VIEW))
 
     # Container objects
-    state_tweets_container = st.beta_expander(f"{selected_state} Tweets", expanded=not NARRATIVE)
-    state_indicators_container = st.beta_expander(f"{selected_state} Indicators", expanded=True)
-    global_tweets_container = st.beta_expander("Global Tweets")
-    country_indicators_container = st.beta_expander("United States Indicators", expanded=NARRATIVE)
+    state_tweets_container = st.beta_expander(f"{selected_state} Tweets", expanded=INTERACTIVE_CONTROL in ['Manual', 'Narrative Tweets'])
+    state_indicators_container = st.beta_expander(f"{selected_state} Indicators", expanded=INTERACTIVE_CONTROL != 'Narrative Tweets')
+    global_tweets_container = st.beta_expander("Global Tweets", expanded=INTERACTIVE_CONTROL == 'Narrative Tweets')
+    country_indicators_container = st.beta_expander("United States Indicators", expanded=INTERACTIVE_CONTROL not in ['Manual', 'Narrative Tweets'])
 
     # State Tweets
     state_code = STATE_TO_CODE_MAP[selected_state.strip()]
