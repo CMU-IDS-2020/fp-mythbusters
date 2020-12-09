@@ -11,8 +11,9 @@
 ## Abstract
 **TODO**
 
-## Summary Image
-**TODO**
+## Summary Images
+![](screenshots/tweet_data.png)
+![](screenshots/covid_data.png)
 
 ## Instructions
 The easiest way to view our app is through the deployed streamlit app, you can find the url to this above. If you'd like to run the application locally, then follow the instructions below.
@@ -60,7 +61,7 @@ streamlit run streamlit_app.py
 
 ### Final deliverables
 
-- [ ] All code for the project should be in the repo.
+- [X] All code for the project should be in the repo.
 - [ ] A 5 minute video demonstration.
 - [ ] Update Readme according to Canvas instructions.
 - [ ] A detailed project report. The contact should submit the video and report as a PDF on Canvas.
