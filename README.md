@@ -36,7 +36,7 @@ streamlit run streamlit_app.py
 ## Link to Video
 [Video Presentation](media/Mythbusters_presentation.mp4)
 
-## Work distribution
+## Work Distribution
 
 * **Joseph Koshakow**: Joe was responsible for all things tweet related. Joe wrote and executed the scripts to fetch and organize the tweet contents from the Twitter API. Additionally Joe created the tweet word clouds and the tweet bar charts as well as the functionality to switch between the two. Joe also performed the initial LDA analysis on the tweets which ended up not being included in the final project.
 
@@ -64,7 +64,7 @@ streamlit run streamlit_app.py
 ### Final deliverables
 
 - [X] All code for the project should be in the repo.
-- [ ] A 5 minute video demonstration.
+- [X] A 5 minute video demonstration.
 - [ ] Update Readme according to Canvas instructions.
 - [ ] A detailed project report. The contact should submit the video and report as a PDF on Canvas.
 
