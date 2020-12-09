@@ -12,9 +12,9 @@
 **TODO**
 
 ## Summary Images
-![](screenshots/tweet_data.png)
-![](screenshots/covid_state_data.png)
-![](screenshots/covid_usa_data.png)
+![](media/tweet_data.png)
+![](media/covid_state_data.png)
+![](media/covid_usa_data.png)
 
 ## Instructions
 The easiest way to view our app is through the deployed streamlit app, you can find the url to this above. If you'd like to run the application locally, then follow the instructions below.
@@ -34,7 +34,7 @@ streamlit run streamlit_app.py
 **TODO**
 
 ## Link to Video
-**TODO**
+[Video Presentation](media/Mythbusters_presentation.mp4)
 
 ## Work distribution
 
