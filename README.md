@@ -15,7 +15,17 @@
 **TODO**
 
 ## Instructions
-**TODO**
+The easiest way to view our app is through the deployed streamlit app, you can find the url to this above. If you'd like to run the application locally, then follow the instructions below.
+1. Install the latest version of Python: https://www.python.org/downloads/
+2. Install the latest version of PIP: https://pip.pypa.io/en/stable/installing/
+3. Install the latest version of Streamlit: https://docs.streamlit.io/en/stable/installation.html
+4. Execute the following commands in a directory of your choice, which will clone the repo, download dependencies, and run the app
+```bash
+git clone https://github.com/CMU-IDS-2020/fp-mythbusters.git
+cd fp-mythbusters
+pip install -r requirements.txt
+streamlit run streamlit_app.py
+```
 
 ## Link to Paper
 **TODO**
