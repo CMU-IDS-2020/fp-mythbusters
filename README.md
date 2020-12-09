@@ -8,6 +8,21 @@
   * vivianle@andrew.cmu.edu
 * **Track**: Narrative
 
+## Abstract
+**TODO**
+
+## Summary Image
+**TODO**
+
+## Instructions
+**TODO**
+
+## Link to Paper
+**TODO**
+
+## Link to Video
+**TODO**
+
 ## Work distribution
 
 * **Joseph Koshakow**: Joe was responsible for all things tweet related. Joe wrote and executed the scripts to fetch and organize the tweet contents from the Twitter API. Additionally Joe created the tweet word clouds and the tweet bar charts as well as the functionality to switch between the two. Joe also performed the initial LDA analysis on the tweets which ended up not being included in the final project.
@@ -17,6 +32,9 @@
 * **James Mahler**: James was responsible for some of the visualizations in the Streamlit app. In particular, he put together the correlation plots and the time series plots that are displayed in the app for certain counties of a state. Additionally, he put together the USA choropleth maps that show the COVID data for the whole country. James also explored how to make the two state maps side-by-side.
 
 * **Bradley Warren**: Bradley was responsible for putting together the narrative for the app, and putting together the deliverables for both the checkpoint and the final video. After Joe, Vivian and James had put together the core parts of the application, Bradley went through the application and wrote the text to go into the application for the narrative.
+
+## Project Process
+**TODO**
 
 ## Deliverables
 
@@ -37,6 +55,6 @@
 - [ ] Update Readme according to Canvas instructions.
 - [ ] A detailed project report. The contact should submit the video and report as a PDF on Canvas.
 
-### Data References
+## Data References
 
 Kerchner, Daniel; Wrubel, Laura, 2020, "Coronavirus Tweet Ids", https://doi.org/10.7910/DVN/LW0BTB, Harvard Dataverse, V7 
