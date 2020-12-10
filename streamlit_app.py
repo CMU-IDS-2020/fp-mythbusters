@@ -17,23 +17,25 @@ from twitter.state_data_aggregator import STATE_TO_CODE_MAP
 from twitter.tweet_fetcher import get_saved_tweet_oembeds
 
 DATA_DIR = "data"
+# 30 min
+CACHE_TTL = 1800
 alt.data_transformers.disable_max_rows()
 
 
-@st.cache(allow_output_mutation=True)  # add caching so we load the data only once
+@st.cache(allow_output_mutation=True, ttl=CACHE_TTL)  # add caching so we load the data only once
 def load_state_fips():
     state_fips = pd.read_csv("data/fips/clean/state_fips_2019.csv", index_col=0)
     state_fips = state_fips[state_fips["State FIPS"] > 0]  # exclude regions, divisions, and non-state rows
     return state_fips[["State FIPS", "Name"]].sort_values("Name").set_index("Name").to_dict()["State FIPS"]
 
 
-@st.cache(allow_output_mutation=True)
+@st.cache(allow_output_mutation=True, ttl=CACHE_TTL)
 def load_county_fips():
     county_fips = pd.read_csv("data/fips/clean/county_fips_2019.csv", index_col=0)
     return county_fips[["State FIPS", "FIPS", "Area Name"]]
 
 
-@st.cache(allow_output_mutation=True)
+@st.cache(allow_output_mutation=True, ttl=CACHE_TTL)
 def load_usda_data():
     poverty = pd.read_csv("data/usda_county_datasets/clean/poverty_2018.csv", index_col=0)
     unemployment_median_hhi = pd.read_csv("data/usda_county_datasets/clean/unemployment_median_hhi_2018.csv",
@@ -67,7 +69,7 @@ def read_and_filter_df(df_name, cumulative=False):
     return df
 
 
-@st.cache(allow_output_mutation=True)
+@st.cache(allow_output_mutation=True, ttl=CACHE_TTL)
 def load_covid_data():
     covid_data = {}
     covid_df_names = {
@@ -87,7 +89,7 @@ def load_covid_data():
     return covid_data
 
 
-@st.cache(allow_output_mutation=True)
+@st.cache(allow_output_mutation=True, ttl=CACHE_TTL)
 def get_covid_date_ranges(covid_data):
     covid_date_ranges = {}
     for covid_feature, df in covid_data.items():
@@ -115,12 +117,12 @@ COVID_END_DATE = None
 COVID_AGG_FUNCTION = "Max"
 
 
-@st.cache(allow_output_mutation=True)
+@st.cache(allow_output_mutation=True, ttl=CACHE_TTL)
 def get_cleaned_tweet_words(state=None, stopwords=None):
     return twitter.word_cloud.get_cleaned_tweet_words(DATA_DIR, state, stopwords)
 
 
-@st.cache(allow_output_mutation=True)
+@st.cache(allow_output_mutation=True, ttl=CACHE_TTL)
 def get_wordcloud(tweets, state=None):
     wc = twitter.word_cloud.get_wordcloud(tweets, DATA_DIR, state)
     fig, ax = plt.subplots()
@@ -129,7 +131,7 @@ def get_wordcloud(tweets, state=None):
     return fig
 
 
-@st.cache(allow_output_mutation=True)
+@st.cache(allow_output_mutation=True, ttl=CACHE_TTL)
 def get_wordcloud_from_file(state=None):
     file_name = state if state else "World"
     file_path = f"data/word_clouds/{file_name}.jpg"
@@ -139,7 +141,7 @@ def get_wordcloud_from_file(state=None):
         return None
 
 
-@st.cache(allow_output_mutation=True)
+@st.cache(allow_output_mutation=True, ttl=CACHE_TTL)
 def get_word_df(words):
     df = pd.DataFrame({"word": words})
     df = df.groupby("word").size().to_frame()
