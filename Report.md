@@ -1,5 +1,9 @@
 # Final Project Report
 
+### Data-Driven Analysis of Popular Beliefs about COVID-19
+
+**Authors:** Joseph Koshakow, Vivian Lee, James Mahler, Bradley Warren
+
 **Project URL**: https://share.streamlit.io/cmu-ids-2020/fp-mythbusters/main
 
 **Abstract**: Given the rising concerns about the long-standing socioeconomic inequalities in our country that have been exposed 
