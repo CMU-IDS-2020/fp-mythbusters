@@ -13,8 +13,17 @@ Given the rising concerns about the long-standing socioeconomic inequalities in 
 
 ## Summary Images
 ![](media/tweet_data.png)
+
+Bar chart of most common terms from Pennsylvania Tweets posted in the summer of 2020
+
 ![](media/covid_state_data.png)
+
+Comparing poverty rates with cumulative cases of Covid-19 in Pennsylvania counties (as of Nov 29, 2020)
+
 ![](media/covid_usa_data.png)
+
+Comparing poverty rates with cumulative cases of Covid-19 in all United States counties (as of Nov 29, 2020)
+
 
 ## Instructions
 The easiest way to view our app is through the deployed streamlit app, you can find the url to this above. If you'd like to run the application locally, then follow the instructions below.
@@ -60,6 +69,33 @@ We initially displayed the tweet data as a word cloud as we thought it would be 
 We transformed the state word clouds from a black rectangle to be in the shape of the corresponding state. Not only was it more visually appealing but it was actually an effective way of encoding the location of the tweets into the image itself. This way when people look at the word cloud they immediately associate it with a particular state. One thing that we noticed was that generating the word clouds was a bit slow, but the actual image generated was always the same. This was due to the fact that we weren’t refetching the tweet contents everytime, making all the words static. So instead of generating the word cloud every time, we generated it once and saved an image of the word cloud. We would then just load that image for each state. This significantly improved performance and lowered the size of our cache.
 
 One suggestion from the TAs was that we should consider replacing the word clouds with bar charts of the words. To allow for flexibility we added radio buttons that allowed the user to toggle between word clouds and bar charts. They both encode and present the same data but they have slightly different pros and cons. Word clouds are visually more appealing and it’s easier to squeeze more words into them. Bar charts give more accurate numbers for each word and allow you to more easily compare words and give you a sense of scale. Due to the pros and cons of each approach we thought that it is mostly a user preference and decided to have the functionality to include both depending on the user’s preference.
+
+#### Socioeconomic Indicators
+
+Like many research projects, we found that the process of arriving at our final product for comparing socioeconomic
+indicators and covid metrics was not linear. In our proposal, we had mentioned comparing covid metrics between different
+countries and measuring the health and economic Covid-19 had on US college towns. However, we later found that we had
+to change our scope and deviate from this initial plan due to the lack of data available for measuring these correlations. 
+We ultimately decided on narrowing our scope to different US state counties since (1) the data was readily
+available via Delphi's public Epidata API and (2) looking at counties instead of states would allow for a more
+fine-grained analysis since the socioeconomic makeup of a state can vary greatly between its different counties.
+
+Since universities are likely still in the process of gathering Covid-19 metrics from students in real-time this Fall
+semester, covid data on college towns was not publicly available yet. However, once compiled and if available, looking 
+at the impact the virus has had on college towns would be an interesting area for future work. In the meantime, 
+we decided to stick with existing data that was available, meaningful, and gathered from trustworthy sources. 
+We found the United States Department of Agriculture website to be immensely helpful; it provided county-level datasets f
+or various socioeconomic features, which we downloaded, cleaned, and merged with our fetched covid datasets.
+
+We took a scientific approach by writing down our initial hypotheses first, which stemmed from both personal biases and 
+popular public opinions within our communities and on our news feeds. Then we completed the implementation of our 
+interactive maps and visualizations before re-visiting our set of questions and observing what the data had to say about 
+them.
+
+After receiving feedback from our design review, we added side-by-side country maps of the United States, with each
+individual county colored by its value for the selected socioeconomic and covid features. Getting a birds-eye view of
+all of the counties in the US allowed us to also make comparisons between states and extrapolate feature correlations 
+that took all of the counties into consideration.
 
 ## Deliverables
 
