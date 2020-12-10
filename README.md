@@ -1,5 +1,7 @@
 # CMU Interactive Data Science Final Project [![Open in Streamlit](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://share.streamlit.io/cmu-ids-2020/fp-mythbusters/main)
 
+### Data-Driven Analysis of Popular Beliefs about COVID-19
+
 * **Online URL**: https://share.streamlit.io/cmu-ids-2020/fp-mythbusters/main
 * **Team members**:
   * Contact person: bwarren2@andrew.cmu.edu
@@ -12,15 +14,15 @@
 Given the rising concerns about the long-standing socioeconomic inequalities in our country that have been exposed since Covid-19 came about, we sought to explore these strong claims and take a data-driven approach to examine the correlation between a region’s socioeconomic makeup and how it has been affected by the virus throughout 2020. We contribute a Streamlit web application with interactive maps and visualizations that enables users to (1) explore the relationships between different socioeconomic indicators and Covid-19 statistics and (2) analyze the most common words used in tweets written by Twitter users from different states throughout the summer of 2020. We supplement our app with a narrative article that both acts as an instructional tutorial and highlights several insights we were able to gain from using our app.
 
 ## Summary Images
-![](media/tweet_data.png)
+![Bar chart of most common terms from Pennsylvania Tweets posted in the summer of 2020](media/tweet_data.png)
 
 Bar chart of most common terms from Pennsylvania Tweets posted in the summer of 2020
 
-![](media/covid_state_data.png)
+![Comparing poverty rates with cumulative cases of Covid-19 in Pennsylvania counties (as of Nov 29, 2020)](media/covid_state_data.png)
 
 Comparing poverty rates with cumulative cases of Covid-19 in Pennsylvania counties (as of Nov 29, 2020)
 
-![](media/covid_usa_data.png)
+![Comparing poverty rates with cumulative cases of Covid-19 in all United States counties (as of Nov 29, 2020)](media/covid_usa_data.png)
 
 Comparing poverty rates with cumulative cases of Covid-19 in all United States counties (as of Nov 29, 2020)
 
@@ -113,7 +115,7 @@ that took all of the counties into consideration.
 
 - [X] All code for the project should be in the repo.
 - [X] A 5 minute video demonstration.
-- [ ] Update Readme according to Canvas instructions.
+- [X] Update Readme according to Canvas instructions.
 - [X] A detailed project report. The contact should submit the video and report as a PDF on Canvas.
 
 ## Data References

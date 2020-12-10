@@ -114,10 +114,10 @@ variables in some of the correlations.
 
 We were surprised to see a weak negative relationship (-0.07) between county population size and cumulative number of 
 covid cases per 100K people, given some of the early news articles that suggested a positive correlation between 
-population density and covid cases. When we look at the correlations within individual states, we find that they are not 
-consistent. Florida shows a negative correlation (-0.11), California and New York show positive correlations 
-(0.13 and 0.59), and Washington seems to show virtually no correlation (-0.01) for these variables. So ultimately we 
-conclude that population size is not an indicative feature for predicting covid susceptibility.
+population density and covid cases (Appendix B and C). When we look at the correlations within individual states, 
+we find that they are not consistent. Florida shows a negative correlation (-0.11), California and New York show 
+positive correlations (0.13 and 0.59), and Washington seems to show virtually no correlation (-0.01) for these variables. 
+So ultimately we conclude that population size is not an indicative feature for predicting covid susceptibility.
 
 The Bureau of Labor and Statistics (Bureau) has suggested that the ability to work from home (telework) is a hidden 
 variable in estimating covid’s impact [[6](https://www.bls.gov/opub/mlr/2020/article/ability-to-work-from-home.htm)]. 
@@ -126,9 +126,9 @@ indeed a positive correlation (0.12) between low education (percentage of adults
 the cumulative number of cases in a US county. Conversely, there is a negative correlation (-0.16) between the 
 percentage of adults who completed high school and cumulative number of cases in a county. Since high-paying white collar 
 jobs result in higher median household income (MHHI), we analyze that socioeconomic feature next and find a negative 
-correlation (-0.15) between MHHI and cumulative cases. Our results support the Bureau’s claim; we find that the ability 
-to telework is largely influenced by socioeconomic factors and it in turn has a large influence on the size of the 
-negative impact covid has on a county.
+correlation (-0.15) between MHHI and cumulative cases (Appendix B, D, E). Our results support the Bureau’s claim; we find 
+that the ability to telework is largely influenced by socioeconomic factors and it in turn has a large influence on 
+the size of the negative impact covid has on a county.
 
 ## Discussion
 
@@ -169,7 +169,7 @@ questions: who is suffering the most economically? How have strict lockdowns pla
 
 ## Appendix
 
-Appendix A: Covid-19 Feature and the available date range for each dataset. Note that the available date range for 
+**Appendix A:** Covid-19 Feature and the available date range for each dataset. Note that the available date range for 
 counties within the same dataset varied as some counties did not have as much recorded data as others. This data was 
 fetched on Dec 2, 2020.
 
@@ -185,4 +185,25 @@ fetched on Dec 2, 2020.
 | % Positive Covid Tests in Past 14 Days          | Sep 9, 2020             | Nov 30, 2020          |
 | % People Not Tested who Wanted Tests            | Sep 8, 2020             | Nov 30, 2020          |
 
+**Appendix B:** Map of US counties colored based on their cumulative number of Covid-19 cases per 100K people as of Nov 29, 2020. 
+Values increase as color changes from light green to dark blue.
 
+![Map of US counties colored based on their cumulative number of Covid-19 cases per 100K people as 
+of Nov 29, 2020](media/us_cumulative_cases.png)
+
+**Appendix C:** Map of US counties colored based on their estimated populations in 2018 recorded by the USDA. Values 
+increase as color changes from light green to dark blue.
+
+![Map of US counties colored based on their estimated populations in 2018 recorded by the USDA](media/us_population.png)
+
+**Appendix D:** Map of US counties colored based on their reported median household incomes in 2018 recorded by the USDA.
+Values increase as color changes from light green to dark blue.
+
+![Map of US counties colored based on their reported median household incomes in 2018 recorded by the 
+USDA](media/us_median_hhi.png)
+
+**Appendix E:** Correlation plot of median household income (2018) vs cumulative number of Covid-19 cases per 100K 
+people as of Nov 29, 2020. The plot shows a negative correlation (-0.1491) between the two features.
+
+![Correlation plot of median household income (2018) vs cumulative number of Covid-19 cases per 100K 
+people as of Nov 29, 2020](media/us_median_hhi_cumulative_cases.png)
