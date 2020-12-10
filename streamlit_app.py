@@ -17,8 +17,8 @@ from twitter.state_data_aggregator import STATE_TO_CODE_MAP
 from twitter.tweet_fetcher import get_saved_tweet_oembeds
 
 DATA_DIR = "data"
-# 30 min
-CACHE_TTL = 1800
+# 10 min
+CACHE_TTL = 600
 alt.data_transformers.disable_max_rows()
 
 
