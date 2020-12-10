@@ -40,7 +40,7 @@ streamlit run streamlit_app.py
 ```
 
 ## Link to Paper
-**TODO**
+[Paper](Report.md)
 
 ## Link to Video
 [Video Presentation](media/Mythbusters_presentation.mp4)
