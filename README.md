@@ -42,7 +42,7 @@ streamlit run streamlit_app.py
 ```
 
 ## Link to Paper
-[Final Project Report](Report.md)
+[Final Project Report](Report.md) ([PDF](Report.pdf))
 
 ## Link to Video
 [Video Presentation](media/Mythbusters_presentation.mp4)
