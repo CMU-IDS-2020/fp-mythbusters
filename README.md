@@ -31,7 +31,7 @@ streamlit run streamlit_app.py
 ```
 
 ## Link to Paper
-[Paper](Report.md)
+[Final Project Report](Report.md)
 
 ## Link to Video
 [Video Presentation](media/Mythbusters_presentation.mp4)
@@ -78,7 +78,7 @@ One suggestion from the TAs was that we should consider replacing the word cloud
 - [X] All code for the project should be in the repo.
 - [X] A 5 minute video demonstration.
 - [ ] Update Readme according to Canvas instructions.
-- [ ] A detailed project report. The contact should submit the video and report as a PDF on Canvas.
+- [X] A detailed project report. The contact should submit the video and report as a PDF on Canvas.
 
 ## Data References
 
