@@ -72,7 +72,7 @@ We transformed the state word clouds from a black rectangle to be in the shape o
 
 One suggestion from the TAs was that we should consider replacing the word clouds with bar charts of the words. To allow for flexibility we added radio buttons that allowed the user to toggle between word clouds and bar charts. They both encode and present the same data but they have slightly different pros and cons. Word clouds are visually more appealing and it’s easier to squeeze more words into them. Bar charts give more accurate numbers for each word and allow you to more easily compare words and give you a sense of scale. Due to the pros and cons of each approach we thought that it is mostly a user preference and decided to have the functionality to include both depending on the user’s preference.
 
-#### Socioeconomic Indicators
+### Socioeconomic Indicators
 
 Like many research projects, we found that the process of arriving at our final product for comparing socioeconomic
 indicators and covid metrics was not linear. In our proposal, we had mentioned comparing covid metrics between different
